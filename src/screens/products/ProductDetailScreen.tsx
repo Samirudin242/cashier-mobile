@@ -1,0 +1,131 @@
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Alert } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { Package, Edit, Trash2 } from 'lucide-react-native';
+import { AppScreen, AppCard, AppText, AppButton, SyncBadge } from '../../components/ui';
+import { productRepository } from '../../repositories/productRepository';
+import { useAuthStore } from '../../stores/authStore';
+import { Product } from '../../types';
+import { formatCurrency, formatDateTime } from '../../utils/helpers';
+import { colors, spacing, radius } from '../../config/theme';
+
+export function ProductDetailScreen() {
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const { localId } = route.params;
+  const user = useAuthStore((s) => s.user);
+  const [product, setProduct] = useState<Product | null>(null);
+
+  useEffect(() => {
+    productRepository.getById(localId).then(setProduct);
+  }, [localId]);
+
+  const handleDelete = () => {
+    Alert.alert('Delete Product', 'Are you sure you want to delete this product?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await productRepository.softDelete(localId, user!.id);
+          navigation.goBack();
+        },
+      },
+    ]);
+  };
+
+  if (!product) return null;
+
+  return (
+    <AppScreen scroll>
+      <View style={styles.header}>
+        <View style={styles.iconBox}>
+          <Package size={32} color={colors.primary} />
+        </View>
+        <AppText variant="title">{product.name}</AppText>
+        <SyncBadge status={product.sync_status} style={styles.badge} />
+      </View>
+
+      <AppCard style={styles.card}>
+        <DetailRow label="SKU" value={product.sku} />
+        <DetailRow label="Sell Price" value={formatCurrency(product.price)} highlight />
+        <DetailRow label="Cost Price" value={formatCurrency(product.cost_price)} />
+        <DetailRow label="Stock" value={String(product.stock)} />
+        <DetailRow label="Category" value={product.category} />
+        <DetailRow label="Status" value={product.is_active ? 'Active' : 'Inactive'} />
+        <DetailRow label="Created" value={formatDateTime(product.created_at_local)} />
+        <DetailRow label="Updated" value={formatDateTime(product.updated_at_local)} />
+      </AppCard>
+
+      <View style={styles.actions}>
+        <AppButton
+          title="Edit Product"
+          onPress={() => navigation.navigate('ProductForm', { localId })}
+          icon={<Edit size={16} color={colors.textInverse} />}
+          fullWidth
+          size="lg"
+        />
+        <AppButton
+          title="Delete Product"
+          onPress={handleDelete}
+          variant="danger"
+          icon={<Trash2 size={16} color={colors.textInverse} />}
+          fullWidth
+          size="lg"
+          style={styles.deleteBtn}
+        />
+      </View>
+    </AppScreen>
+  );
+}
+
+function DetailRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+  return (
+    <View style={detailStyles.row}>
+      <AppText variant="caption">{label}</AppText>
+      <AppText variant={highlight ? 'bodySemibold' : 'body'} style={highlight ? { color: colors.primary } : undefined}>
+        {value}
+      </AppText>
+    </View>
+  );
+}
+
+const detailStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+});
+
+const styles = StyleSheet.create({
+  header: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  iconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: radius.xl,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  badge: {
+    marginTop: spacing.sm,
+  },
+  card: {
+    padding: spacing.lg,
+  },
+  actions: {
+    marginTop: spacing.xl,
+    paddingBottom: spacing.xxl,
+  },
+  deleteBtn: {
+    marginTop: spacing.sm,
+  },
+});
