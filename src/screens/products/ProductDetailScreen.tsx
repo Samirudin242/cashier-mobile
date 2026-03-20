@@ -21,10 +21,10 @@ export function ProductDetailScreen() {
   }, [localId]);
 
   const handleDelete = () => {
-    Alert.alert('Delete Product', 'Are you sure you want to delete this product?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Hapus Produk', 'Apakah Anda yakin ingin menghapus produk ini?', [
+      { text: 'Batal', style: 'cancel' },
       {
-        text: 'Delete',
+        text: 'Hapus',
         style: 'destructive',
         onPress: async () => {
           await productRepository.softDelete(localId, user!.id);
@@ -48,25 +48,25 @@ export function ProductDetailScreen() {
 
       <AppCard style={styles.card}>
         <DetailRow label="SKU" value={product.sku} />
-        <DetailRow label="Sell Price" value={formatCurrency(product.price)} highlight />
-        <DetailRow label="Cost Price" value={formatCurrency(product.cost_price)} />
-        <DetailRow label="Stock" value={String(product.stock)} />
-        <DetailRow label="Category" value={product.category} />
-        <DetailRow label="Status" value={product.is_active ? 'Active' : 'Inactive'} />
-        <DetailRow label="Created" value={formatDateTime(product.created_at_local)} />
-        <DetailRow label="Updated" value={formatDateTime(product.updated_at_local)} />
+        <DetailRow label="Harga Jual" value={formatCurrency(product.price)} highlight />
+        <DetailRow label="Harga Modal" value={formatCurrency(product.cost_price)} />
+        <DetailRow label="Stok" value={String(product.stock)} />
+        <DetailRow label="Kategori" value={product.category} />
+        <DetailRow label="Status" value={product.is_active ? 'Aktif' : 'Nonaktif'} />
+        <DetailRow label="Dibuat" value={formatDateTime(product.created_at_local)} />
+        <DetailRow label="Diperbarui" value={formatDateTime(product.updated_at_local)} />
       </AppCard>
 
       <View style={styles.actions}>
         <AppButton
-          title="Edit Product"
+          title="Edit Produk"
           onPress={() => navigation.navigate('ProductForm', { localId })}
           icon={<Edit size={16} color={colors.textInverse} />}
           fullWidth
           size="lg"
         />
         <AppButton
-          title="Delete Product"
+          title="Hapus Produk"
           onPress={handleDelete}
           variant="danger"
           icon={<Trash2 size={16} color={colors.textInverse} />}

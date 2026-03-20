@@ -21,7 +21,7 @@ export default function App() {
   if (!dbReady || isLoading) {
     return (
       <SafeAreaProvider>
-        <AppLoader message="Starting Cashier POS..." />
+        <AppLoader message="Memuat Kasir POS..." />
         <StatusBar style="dark" />
       </SafeAreaProvider>
     );

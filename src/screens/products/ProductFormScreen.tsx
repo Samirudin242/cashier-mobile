@@ -43,7 +43,7 @@ export function ProductFormScreen() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.price) {
-      Alert.alert('Validation', 'Name and price are required');
+      Alert.alert('Validasi', 'Nama dan harga wajib diisi');
       return;
     }
 
@@ -69,14 +69,14 @@ export function ProductFormScreen() {
           price: parseFloat(form.price) || 0,
           cost_price: parseFloat(form.cost_price) || 0,
           stock: parseInt(form.stock) || 0,
-          category: form.category.trim() || 'General',
+          category: form.category.trim() || 'Umum',
           device_id: deviceId,
           user_id: user!.id,
         });
       }
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      Alert.alert('Kesalahan', err.message);
     } finally {
       setLoading(false);
     }
@@ -85,26 +85,26 @@ export function ProductFormScreen() {
   return (
     <AppScreen scroll>
       <AppText variant="title" style={styles.title}>
-        {isEdit ? 'Edit Product' : 'New Product'}
+        {isEdit ? 'Edit Produk' : 'Produk Baru'}
       </AppText>
 
       <AppCard style={styles.card}>
         <AppInput
-          label="Product Name"
-          placeholder="e.g. Nasi Goreng"
+          label="Nama Produk"
+          placeholder="cth. Nasi Goreng"
           value={form.name}
           onChangeText={(v) => setForm({ ...form, name: v })}
         />
         <AppInput
           label="SKU"
-          placeholder="e.g. NG-001"
+          placeholder="cth. NG-001"
           value={form.sku}
           onChangeText={(v) => setForm({ ...form, sku: v })}
           autoCapitalize="characters"
         />
         <View style={styles.row}>
           <AppInput
-            label="Sell Price"
+            label="Harga Jual"
             placeholder="0"
             value={form.price}
             onChangeText={(v) => setForm({ ...form, price: v })}
@@ -112,7 +112,7 @@ export function ProductFormScreen() {
             containerStyle={styles.halfInput}
           />
           <AppInput
-            label="Cost Price"
+            label="Harga Modal"
             placeholder="0"
             value={form.cost_price}
             onChangeText={(v) => setForm({ ...form, cost_price: v })}
@@ -122,7 +122,7 @@ export function ProductFormScreen() {
         </View>
         <View style={styles.row}>
           <AppInput
-            label="Stock"
+            label="Stok"
             placeholder="0"
             value={form.stock}
             onChangeText={(v) => setForm({ ...form, stock: v })}
@@ -130,8 +130,8 @@ export function ProductFormScreen() {
             containerStyle={styles.halfInput}
           />
           <AppInput
-            label="Category"
-            placeholder="e.g. Food"
+            label="Kategori"
+            placeholder="cth. Makanan"
             value={form.category}
             onChangeText={(v) => setForm({ ...form, category: v })}
             containerStyle={styles.halfInput}
@@ -141,14 +141,14 @@ export function ProductFormScreen() {
 
       <View style={styles.actions}>
         <AppButton
-          title={isEdit ? 'Update Product' : 'Save Product'}
+          title={isEdit ? 'Perbarui Produk' : 'Simpan Produk'}
           onPress={handleSave}
           loading={loading}
           fullWidth
           size="lg"
         />
         <AppButton
-          title="Cancel"
+          title="Batal"
           onPress={() => navigation.goBack()}
           variant="ghost"
           fullWidth

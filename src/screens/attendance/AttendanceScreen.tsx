@@ -48,7 +48,7 @@ export function AttendanceScreen() {
       });
       await loadData();
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      Alert.alert('Kesalahan', err.message);
     } finally {
       setLoading(false);
     }
@@ -61,7 +61,7 @@ export function AttendanceScreen() {
       await attendanceRepository.clockOut(todayAttendance.local_id);
       await loadData();
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      Alert.alert('Kesalahan', err.message);
     } finally {
       setLoading(false);
     }
@@ -82,11 +82,11 @@ export function AttendanceScreen() {
           <AppText variant="bodyMedium">{formatDate(item.date)}</AppText>
           <AppText variant="captionMuted">
             {formatTime(item.clock_in)}
-            {item.clock_out ? ` — ${formatTime(item.clock_out)}` : ' (active)'}
+            {item.clock_out ? ` — ${formatTime(item.clock_out)}` : ' (aktif)'}
           </AppText>
         </View>
         <AppBadge
-          label={item.status}
+          label={({ present: 'Hadir', late: 'Terlambat', absent: 'Absen', leave: 'Cuti' } as Record<string, string>)[item.status] ?? item.status}
           variant={item.status === 'present' ? 'success' : item.status === 'late' ? 'warning' : 'error'}
         />
       </View>
@@ -95,12 +95,12 @@ export function AttendanceScreen() {
 
   return (
     <AppScreen scroll>
-      <AppText variant="title" style={styles.pageTitle}>Attendance</AppText>
+      <AppText variant="title" style={styles.pageTitle}>Absensi</AppText>
 
       <AppCard style={styles.todayCard}>
         <View style={styles.todayHeader}>
           <Clock size={20} color={colors.primary} />
-          <AppText variant="sectionTitle" style={styles.todayTitle}>Today</AppText>
+          <AppText variant="sectionTitle" style={styles.todayTitle}>Hari Ini</AppText>
         </View>
 
         {todayAttendance ? (
@@ -120,12 +120,12 @@ export function AttendanceScreen() {
                   </AppText>
                 </View>
               ) : (
-                <AppBadge label="Active" variant="success" />
+                <AppBadge label="Aktif" variant="success" />
               )}
             </View>
             {!todayAttendance.clock_out && (
               <AppButton
-                title="Clock Out"
+                title="Keluar"
                 onPress={handleClockOut}
                 loading={loading}
                 variant="danger"
@@ -139,10 +139,10 @@ export function AttendanceScreen() {
         ) : (
           <View>
             <AppText variant="captionMuted" style={styles.noClock}>
-              You haven't clocked in today
+              Anda belum absen masuk hari ini
             </AppText>
             <AppButton
-              title="Clock In"
+              title="Masuk"
               onPress={handleClockIn}
               loading={loading}
               icon={<LogIn size={16} color={colors.textInverse} />}
@@ -154,7 +154,7 @@ export function AttendanceScreen() {
         )}
       </AppCard>
 
-      <AppSectionHeader title="History" />
+      <AppSectionHeader title="Riwayat" />
       <FlatList
         data={history}
         renderItem={renderItem}
@@ -163,8 +163,8 @@ export function AttendanceScreen() {
         ListEmptyComponent={
           <AppEmptyState
             icon={<Clock size={40} color={colors.textMuted} />}
-            title="No Records"
-            message="Your attendance history will appear here"
+            title="Belum Ada Data"
+            message="Riwayat absensi Anda akan muncul di sini"
           />
         }
       />

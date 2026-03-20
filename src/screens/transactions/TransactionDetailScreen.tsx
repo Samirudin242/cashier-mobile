@@ -28,7 +28,8 @@ export function TransactionDetailScreen() {
   const handleWhatsApp = () => {
     if (!transaction) return;
     const itemLines = items.map((i) => `  ${i.product_name} x${i.quantity} = ${formatCurrency(i.subtotal)}`).join('\n');
-    const message = `🧾 *Receipt*\n${transaction.transaction_number}\n\n${itemLines}\n\nTotal: *${formatCurrency(transaction.total)}*\nPayment: ${transaction.payment_method}\n\nThank you!`;
+    const paymentLabel = ({ cash: 'Tunai', transfer: 'Transfer', qris: 'QRIS' } as Record<string, string>)[transaction.payment_method] ?? transaction.payment_method;
+    const message = `🧾 *Struk*\n${transaction.transaction_number}\n\n${itemLines}\n\nTotal: *${formatCurrency(transaction.total)}*\nPembayaran: ${paymentLabel}\n\nTerima kasih!`;
     const phone = transaction.customer_whatsapp?.replace(/\D/g, '') || '';
     const url = phone
       ? `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`
@@ -50,7 +51,7 @@ export function TransactionDetailScreen() {
       </View>
 
       <AppCard style={styles.section}>
-        <AppText variant="bodySemibold" style={styles.sectionTitle}>Items</AppText>
+        <AppText variant="bodySemibold" style={styles.sectionTitle}>Daftar Item</AppText>
         {items.map((item) => (
           <View key={item.local_id} style={styles.itemRow}>
             <View style={styles.itemInfo}>
@@ -67,10 +68,10 @@ export function TransactionDetailScreen() {
       <AppCard style={styles.section}>
         <DetailRow label="Subtotal" value={formatCurrency(transaction.subtotal)} />
         {transaction.discount > 0 && (
-          <DetailRow label="Discount" value={`-${formatCurrency(transaction.discount)}`} isRed />
+          <DetailRow label="Diskon" value={`-${formatCurrency(transaction.discount)}`} isRed />
         )}
         {transaction.tax > 0 && (
-          <DetailRow label="Tax" value={formatCurrency(transaction.tax)} />
+          <DetailRow label="Pajak" value={formatCurrency(transaction.tax)} />
         )}
         <View style={styles.totalRow}>
           <AppText variant="sectionTitle">Total</AppText>
@@ -81,16 +82,16 @@ export function TransactionDetailScreen() {
       </AppCard>
 
       <AppCard style={styles.section}>
-        <DetailRow label="Payment" value={transaction.payment_method.toUpperCase()} />
-        <DetailRow label="Employee" value={transaction.employee_name} />
-        {transaction.customer_name && <DetailRow label="Customer" value={transaction.customer_name} />}
+        <DetailRow label="Pembayaran" value={({ cash: 'Tunai', transfer: 'Transfer', qris: 'QRIS' } as Record<string, string>)[transaction.payment_method] ?? transaction.payment_method.toUpperCase()} />
+        <DetailRow label="Karyawan" value={transaction.employee_name} />
+        {transaction.customer_name && <DetailRow label="Pelanggan" value={transaction.customer_name} />}
         {transaction.customer_whatsapp && <DetailRow label="WhatsApp" value={transaction.customer_whatsapp} />}
-        {transaction.notes && <DetailRow label="Notes" value={transaction.notes} />}
+        {transaction.notes && <DetailRow label="Catatan" value={transaction.notes} />}
       </AppCard>
 
       <View style={styles.actions}>
         <AppButton
-          title="Print Receipt"
+          title="Cetak Struk"
           onPress={() => {}}
           variant="outline"
           icon={<Printer size={18} color={colors.text} />}
@@ -98,7 +99,7 @@ export function TransactionDetailScreen() {
           size="lg"
         />
         <AppButton
-          title="Send WhatsApp"
+          title="Kirim WhatsApp"
           onPress={handleWhatsApp}
           variant="secondary"
           icon={<MessageCircle size={18} color={colors.primary} />}

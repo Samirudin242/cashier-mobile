@@ -20,11 +20,11 @@ const syncStatusVariant: Record<SyncStatus, BadgeVariant> = {
 };
 
 const syncStatusLabel: Record<SyncStatus, string> = {
-  pending_upload: 'Pending',
-  synced: 'Synced',
-  failed: 'Failed',
-  pending_delete: 'Deleting',
-  conflict: 'Conflict',
+  pending_upload: 'Menunggu',
+  synced: 'Tersinkron',
+  failed: 'Gagal',
+  pending_delete: 'Menghapus',
+  conflict: 'Konflik',
 };
 
 export function AppBadge({ label, variant = 'info', style }: Props) {

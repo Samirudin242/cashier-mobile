@@ -47,9 +47,9 @@ export function HomeScreen() {
 
   const greeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
+    if (hour < 12) return 'Selamat Pagi';
+    if (hour < 17) return 'Selamat Siang';
+    return 'Selamat Malam';
   };
 
   return (
@@ -57,28 +57,28 @@ export function HomeScreen() {
       <View style={styles.headerSection}>
         <View>
           <AppText variant="caption">{greeting()}</AppText>
-          <AppText variant="title" style={styles.userName}>{user?.name ?? 'User'}</AppText>
+          <AppText variant="title" style={styles.userName}>{user?.name ?? 'Pengguna'}</AppText>
         </View>
         <View style={styles.roleTag}>
           <AppText variant="captionMuted" style={styles.roleText}>
-            {user?.role === 'owner' ? 'Owner' : 'Employee'}
+            {user?.role === 'owner' ? 'Pemilik' : 'Karyawan'}
           </AppText>
         </View>
       </View>
 
       <View style={styles.statsRow}>
         <AppStatCard
-          title="Today's Sales"
+          title="Penjualan Hari Ini"
           value={formatCurrency(stats.todayTotal)}
-          subtitle={`${stats.todayCount} transactions`}
+          subtitle={`${stats.todayCount} transaksi`}
           icon={<DollarSign size={16} color={colors.success} />}
           accentColor={colors.success}
         />
         <View style={{ width: spacing.md }} />
         <AppStatCard
-          title="Products"
+          title="Produk"
           value={String(stats.productCount)}
-          subtitle="Total active"
+          subtitle="Total aktif"
           icon={<Package size={16} color={colors.primary} />}
           accentColor={colors.primary}
         />
@@ -91,35 +91,35 @@ export function HomeScreen() {
               <ArrowRightLeft size={18} color={colors.warning} />
               <View style={styles.syncBannerText}>
                 <AppText variant="bodyMedium" style={{ color: colors.warning }}>
-                  {stats.pendingSync} pending sync
+                  {stats.pendingSync} menunggu sinkronisasi
                 </AppText>
-                <AppText variant="captionMuted">Tap to sync your data</AppText>
+                <AppText variant="captionMuted">Ketuk untuk sinkronkan data</AppText>
               </View>
             </View>
           </AppCard>
         </Pressable>
       )}
 
-      <AppSectionHeader title="Quick Actions" />
+      <AppSectionHeader title="Aksi Cepat" />
       <View style={styles.actionsGrid}>
         <QuickAction
           icon={<ShoppingCart size={22} color={colors.primary} />}
-          label="New Sale"
+          label="Penjualan Baru"
           onPress={() => navigation.navigate('CheckoutStack')}
         />
         <QuickAction
           icon={<Package size={22} color={colors.success} />}
-          label="Products"
+          label="Produk"
           onPress={() => navigation.navigate('ProductsTab')}
         />
         <QuickAction
           icon={<ArrowRightLeft size={22} color={colors.warning} />}
-          label="Transactions"
+          label="Transaksi"
           onPress={() => navigation.navigate('TransactionsTab')}
         />
         <QuickAction
           icon={<Clock size={22} color={colors.error} />}
-          label="Attendance"
+          label="Absensi"
           onPress={() => navigation.navigate('AttendanceStack')}
         />
       </View>

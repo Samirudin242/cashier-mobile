@@ -64,8 +64,8 @@ export function TransactionsScreen() {
           !loading ? (
             <AppEmptyState
               icon={<ArrowRightLeft size={48} color={colors.textMuted} />}
-              title="No Transactions"
-              message="Completed transactions will appear here"
+              title="Belum Ada Transaksi"
+              message="Transaksi yang sudah selesai akan muncul di sini"
             />
           ) : null
         }

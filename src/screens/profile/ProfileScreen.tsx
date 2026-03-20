@@ -36,9 +36,9 @@ export function ProfileScreen() {
   );
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: () => logout() },
+    Alert.alert('Keluar', 'Apakah Anda yakin?', [
+      { text: 'Batal', style: 'cancel' },
+      { text: 'Keluar', style: 'destructive', onPress: () => logout() },
     ]);
   };
 
@@ -49,46 +49,46 @@ export function ProfileScreen() {
           <User size={32} color={colors.primary} />
         </View>
         <AppText variant="title">{user?.name}</AppText>
-        <AppText variant="captionMuted">Code: {user?.access_code}</AppText>
+        <AppText variant="captionMuted">Kode: {user?.access_code}</AppText>
         <View style={styles.roleBadge}>
           <AppText variant="captionMuted" style={styles.roleText}>
-            {user?.role === 'owner' ? 'Owner' : 'Employee'}
+            {user?.role === 'owner' ? 'Pemilik' : 'Karyawan'}
           </AppText>
         </View>
       </View>
 
-      <AppSectionHeader title="Today's Performance" />
+      <AppSectionHeader title="Performa Hari Ini" />
       <View style={styles.statsRow}>
         <AppStatCard
-          title="Sales"
+          title="Penjualan"
           value={formatCurrency(todayStats.total)}
-          subtitle={`${todayStats.count} transactions`}
+          subtitle={`${todayStats.count} transaksi`}
           icon={<TrendingUp size={16} color={colors.success} />}
           accentColor={colors.success}
         />
         <View style={{ width: spacing.md }} />
         <AppStatCard
-          title="This Month"
+          title="Bulan Ini"
           value={`${attendanceSummary.present + attendanceSummary.late}`}
-          subtitle="Days attended"
+          subtitle="Hari hadir"
           icon={<Calendar size={16} color={colors.primary} />}
           accentColor={colors.primary}
         />
       </View>
 
-      <AppSectionHeader title="Attendance Summary" />
+      <AppSectionHeader title="Ringkasan Absensi" />
       <AppCard style={styles.attendanceCard}>
         <View style={styles.attendanceGrid}>
-          <AttendanceStat label="Present" value={attendanceSummary.present} color={colors.success} />
-          <AttendanceStat label="Late" value={attendanceSummary.late} color={colors.warning} />
-          <AttendanceStat label="Absent" value={attendanceSummary.absent} color={colors.error} />
-          <AttendanceStat label="Leave" value={attendanceSummary.leave} color={colors.textSecondary} />
+          <AttendanceStat label="Hadir" value={attendanceSummary.present} color={colors.success} />
+          <AttendanceStat label="Terlambat" value={attendanceSummary.late} color={colors.warning} />
+          <AttendanceStat label="Absen" value={attendanceSummary.absent} color={colors.error} />
+          <AttendanceStat label="Cuti" value={attendanceSummary.leave} color={colors.textSecondary} />
         </View>
       </AppCard>
 
       <View style={styles.logoutSection}>
         <AppButton
-          title="Logout"
+          title="Keluar"
           onPress={handleLogout}
           variant="danger"
           icon={<LogOut size={18} color={colors.textInverse} />}

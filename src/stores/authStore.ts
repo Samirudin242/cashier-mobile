@@ -1,10 +1,10 @@
-import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
-import { User } from '../types';
-import { userRepository } from '../repositories/userRepository';
+import { create } from "zustand";
+import * as SecureStore from "expo-secure-store";
+import { User } from "../types";
+import { userRepository } from "../repositories/userRepository";
 
-const AUTH_KEY = 'cashier_auth_user';
-const DEVICE_KEY = 'cashier_device_id';
+const AUTH_KEY = "cashier_auth_user";
+const DEVICE_KEY = "cashier_device_id";
 
 interface AuthState {
   user: User | null;
@@ -13,14 +13,16 @@ interface AuthState {
   isAuthenticated: boolean;
 
   initialize: () => Promise<void>;
-  loginWithCode: (code: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithCode: (
+    code: string
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   isOwner: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  deviceId: '',
+  deviceId: "",
   isLoading: true,
   isAuthenticated: false,
 
@@ -28,7 +30,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       let deviceId = await SecureStore.getItemAsync(DEVICE_KEY);
       if (!deviceId) {
-        deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        deviceId =
+          "device_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
         await SecureStore.setItemAsync(DEVICE_KEY, deviceId);
       }
 
@@ -45,50 +48,59 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loginWithCode: async (code: string) => {
-    const trimmed = code.trim().toUpperCase();
-    if (!trimmed) {
-      return { success: false, error: 'Please enter your access code' };
-    }
-
-    const user = await userRepository.findByAccessCode(trimmed);
-    if (!user) {
-      return { success: false, error: 'Invalid access code. Please try again.' };
-    }
-
-    if (!user.is_active) {
-      return { success: false, error: 'This account has been deactivated.' };
-    }
-
-    const { deviceId } = get();
-
-    // Check Supabase for device lock
     try {
-      const lockedDevice = await userRepository.checkCloudDeviceLock(trimmed);
+      const trimmed = code.trim().toUpperCase();
+      if (!trimmed) {
+        return { success: false, error: "Silakan masukkan kode akses Anda" };
+      }
 
-      if (lockedDevice && lockedDevice !== deviceId) {
+      const user = await userRepository.findByAccessCode(trimmed);
+      if (!user) {
         return {
           success: false,
-          error: 'This access code is already in use on another device. The other device must logout first.',
+          error: "Kode akses tidak valid. Silakan coba lagi.",
         };
       }
 
-      // Lock this code to the current device in Supabase
-      await userRepository.lockDeviceInCloud(trimmed, deviceId);
-    } catch {
-      // Network unavailable — reject login since we can't verify device lock
-      return {
-        success: false,
-        error: 'Unable to verify access code. Please check your internet connection and try again.',
-      };
+      if (!user.is_active) {
+        return { success: false, error: "Akun ini telah dinonaktifkan." };
+      }
+
+      const { deviceId } = get();
+
+      // Check Supabase for device lock — skip gracefully if Supabase isn't ready
+      try {
+        const lockedDevice =
+          await userRepository.checkCloudDeviceLock(trimmed);
+
+        if (lockedDevice && lockedDevice !== deviceId) {
+          return {
+            success: false,
+            error:
+              "Kode akses ini sudah digunakan di perangkat lain. Perangkat lain harus logout terlebih dahulu.",
+          };
+        }
+
+        await userRepository.lockDeviceInCloud(trimmed, deviceId);
+      } catch (supaErr: any) {
+        console.warn(
+          "[Login] Supabase device lock skipped:",
+          supaErr?.message || supaErr
+        );
+      }
+
+      // Update local DB
+      await userRepository.setLocalDeviceLock(user.id, deviceId);
+
+      // Persist session
+      await SecureStore.setItemAsync(AUTH_KEY, JSON.stringify(user));
+      set({ user, isAuthenticated: true });
+      return { success: true };
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      console.error("[Login] Unexpected error:", msg);
+      return { success: false, error: msg };
     }
-
-    // Update local DB
-    await userRepository.setLocalDeviceLock(user.id, deviceId);
-
-    // Persist session
-    await SecureStore.setItemAsync(AUTH_KEY, JSON.stringify(user));
-    set({ user, isAuthenticated: true });
-    return { success: true };
   },
 
   logout: async () => {
@@ -109,5 +121,5 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: null, isAuthenticated: false });
   },
 
-  isOwner: () => get().user?.role === 'owner',
+  isOwner: () => get().user?.role === "owner",
 }));

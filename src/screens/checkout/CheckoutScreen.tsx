@@ -47,7 +47,7 @@ export function CheckoutScreen() {
           </AppText>
         </View>
         <View style={styles.productStock}>
-          <AppText variant="captionMuted">Stock: {item.stock}</AppText>
+          <AppText variant="captionMuted">Stok: {item.stock}</AppText>
         </View>
         {qty > 0 && (
           <View style={styles.qtyBadge}>
@@ -63,7 +63,7 @@ export function CheckoutScreen() {
       <AppScreen scroll={false} padded={false}>
         <View style={styles.searchBar}>
           <AppInput
-            placeholder="Search products..."
+            placeholder="Cari produk..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             icon={<Search size={18} color={colors.textMuted} />}
@@ -82,8 +82,8 @@ export function CheckoutScreen() {
           ListEmptyComponent={
             <AppEmptyState
               icon={<Package size={40} color={colors.textMuted} />}
-              title="No Products"
-              message="Add products first to start selling"
+              title="Belum Ada Produk"
+              message="Tambahkan produk terlebih dahulu"
             />
           }
         />
@@ -103,7 +103,7 @@ export function CheckoutScreen() {
           <AppText variant="bodySemibold" style={styles.cartTotal}>
             {formatCurrency(total)}
           </AppText>
-          <AppText variant="bodyMedium" style={styles.cartAction}>View Cart</AppText>
+          <AppText variant="bodyMedium" style={styles.cartAction}>Lihat Keranjang</AppText>
         </Pressable>
       )}
     </View>

@@ -45,7 +45,7 @@ export function CartReviewScreen() {
         transactionNumber: txn.transaction_number,
       });
     } catch (err: any) {
-      Alert.alert('Error', err.message);
+      Alert.alert('Kesalahan', err.message);
     } finally {
       setLoading(false);
     }
@@ -81,7 +81,7 @@ export function CartReviewScreen() {
 
   return (
     <AppScreen scroll>
-      <AppText variant="title" style={styles.title}>Cart Review</AppText>
+      <AppText variant="title" style={styles.title}>Ringkasan Keranjang</AppText>
 
       <FlatList
         data={items}
@@ -91,16 +91,16 @@ export function CartReviewScreen() {
       />
 
       <AppCard style={styles.section}>
-        <AppText variant="sectionTitle" style={styles.sectionTitle}>Customer Info</AppText>
+        <AppText variant="sectionTitle" style={styles.sectionTitle}>Info Pelanggan</AppText>
         <AppInput
-          label="Customer Name"
-          placeholder="Optional"
+          label="Nama Pelanggan"
+          placeholder="Opsional"
           value={customerName}
           onChangeText={setCustomerName}
         />
         <AppInput
-          label="WhatsApp Number"
-          placeholder="e.g. 08123456789"
+          label="Nomor WhatsApp"
+          placeholder="cth. 08123456789"
           value={customerWhatsapp}
           onChangeText={setCustomerWhatsapp}
           keyboardType="phone-pad"
@@ -108,11 +108,11 @@ export function CartReviewScreen() {
       </AppCard>
 
       <AppCard style={styles.section}>
-        <AppText variant="sectionTitle" style={styles.sectionTitle}>Payment</AppText>
+        <AppText variant="sectionTitle" style={styles.sectionTitle}>Pembayaran</AppText>
         <View style={styles.paymentRow}>
           <PaymentOption
             icon={<Banknote size={18} color={paymentMethod === 'cash' ? colors.textInverse : colors.text} />}
-            label="Cash"
+            label="Tunai"
             selected={paymentMethod === 'cash'}
             onPress={() => setPaymentMethod('cash')}
           />
@@ -130,15 +130,15 @@ export function CartReviewScreen() {
           />
         </View>
         <AppInput
-          label="Discount"
+          label="Diskon"
           placeholder="0"
           value={discount ? String(discount) : ''}
           onChangeText={(v) => setDiscount(parseFloat(v) || 0)}
           keyboardType="numeric"
         />
         <AppInput
-          label="Notes"
-          placeholder="Optional notes"
+          label="Catatan"
+          placeholder="Catatan opsional"
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -152,7 +152,7 @@ export function CartReviewScreen() {
         </View>
         {discount > 0 && (
           <View style={styles.totalRow}>
-            <AppText variant="body">Discount</AppText>
+            <AppText variant="body">Diskon</AppText>
             <AppText variant="body" style={{ color: colors.error }}>-{formatCurrency(discount)}</AppText>
           </View>
         )}
@@ -166,7 +166,7 @@ export function CartReviewScreen() {
 
       <View style={styles.actions}>
         <AppButton
-          title="Complete Transaction"
+          title="Selesaikan Transaksi"
           onPress={handleComplete}
           loading={loading}
           disabled={items.length === 0}

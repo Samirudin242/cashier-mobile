@@ -53,14 +53,14 @@ export function SyncCenterScreen() {
       await loadData();
       if (result.failed > 0) {
         Alert.alert(
-          'Sync Partial',
-          `Uploaded: ${result.uploaded}\nFailed: ${result.failed}\n\n${result.errors.slice(0, 3).join('\n')}`
+          'Sinkronisasi Sebagian',
+          `Diunggah: ${result.uploaded}\nGagal: ${result.failed}\n\n${result.errors.slice(0, 3).join('\n')}`
         );
       } else {
-        Alert.alert('Sync Complete', `${result.uploaded} records uploaded successfully.`);
+        Alert.alert('Sinkronisasi Selesai', `${result.uploaded} data berhasil diunggah.`);
       }
     } catch (err: any) {
-      Alert.alert('Sync Error', err.message);
+      Alert.alert('Kesalahan Sinkronisasi', err.message);
     } finally {
       setUploading(false);
     }
@@ -73,14 +73,14 @@ export function SyncCenterScreen() {
       await loadData();
       if (result.failed > 0) {
         Alert.alert(
-          'Download Partial',
-          `Downloaded: ${result.downloaded}\nFailed: ${result.failed}`
+          'Unduhan Sebagian',
+          `Diunduh: ${result.downloaded}\nGagal: ${result.failed}`
         );
       } else {
-        Alert.alert('Download Complete', `${result.downloaded} records downloaded.`);
+        Alert.alert('Unduhan Selesai', `${result.downloaded} data berhasil diunduh.`);
       }
     } catch (err: any) {
-      Alert.alert('Download Error', err.message);
+      Alert.alert('Kesalahan Unduhan', err.message);
     } finally {
       setDownloading(false);
     }
@@ -88,35 +88,35 @@ export function SyncCenterScreen() {
 
   return (
     <AppScreen scroll>
-      <AppText variant="title" style={styles.pageTitle}>Sync Center</AppText>
+      <AppText variant="title" style={styles.pageTitle}>Pusat Sinkronisasi</AppText>
 
       <AppCard style={styles.statusCard}>
         <View style={styles.statusHeader}>
           <RefreshCw size={20} color={colors.primary} />
-          <AppText variant="sectionTitle" style={styles.statusTitle}>Sync Status</AppText>
+          <AppText variant="sectionTitle" style={styles.statusTitle}>Status Sinkronisasi</AppText>
         </View>
 
         <View style={styles.statusGrid}>
           <StatusItem
             icon={<Clock size={16} color={colors.textSecondary} />}
-            label="Last Sync"
-            value={summary.lastSyncTime ? formatDateTime(summary.lastSyncTime) : 'Never'}
+            label="Sinkronisasi Terakhir"
+            value={summary.lastSyncTime ? formatDateTime(summary.lastSyncTime) : 'Belum Pernah'}
           />
           <StatusItem
             icon={<Upload size={16} color={colors.warning} />}
-            label="Pending Upload"
+            label="Menunggu Unggah"
             value={String(summary.pendingUpload)}
             badgeVariant={summary.pendingUpload > 0 ? 'warning' : undefined}
           />
           <StatusItem
             icon={<AlertTriangle size={16} color={colors.error} />}
-            label="Failed"
+            label="Gagal"
             value={String(summary.failedUpload)}
             badgeVariant={summary.failedUpload > 0 ? 'error' : undefined}
           />
           <StatusItem
             icon={<CheckCircle size={16} color={colors.success} />}
-            label="Total Synced"
+            label="Total Tersinkron"
             value={String(summary.totalSynced)}
           />
         </View>
@@ -124,7 +124,7 @@ export function SyncCenterScreen() {
 
       <View style={styles.actionRow}>
         <AppButton
-          title="Upload Sync"
+          title="Unggah Data"
           onPress={handleUpload}
           loading={uploading}
           disabled={downloading}
@@ -133,7 +133,7 @@ export function SyncCenterScreen() {
           style={styles.actionBtn}
         />
         <AppButton
-          title="Download Sync"
+          title="Unduh Data"
           onPress={handleDownload}
           loading={downloading}
           disabled={uploading}
@@ -146,19 +146,19 @@ export function SyncCenterScreen() {
 
       {logs.length > 0 && (
         <>
-          <AppSectionHeader title="Recent Activity" />
+          <AppSectionHeader title="Aktivitas Terbaru" />
           {logs.map((log) => (
             <AppCard key={log.id} style={styles.logCard}>
               <View style={styles.logRow}>
                 <View style={[styles.logDot, { backgroundColor: log.status === 'success' ? colors.success : colors.error }]} />
                 <View style={styles.logInfo}>
                   <AppText variant="bodyMedium">
-                    {log.action === 'upload' ? '↑' : '↓'} {log.entity_type}
+                    {log.action === 'upload' ? '↑' : '↓'} {({ products: 'Produk', transactions: 'Transaksi', customers: 'Pelanggan', attendance: 'Absensi' } as Record<string, string>)[log.entity_type] ?? log.entity_type}
                   </AppText>
                   <AppText variant="captionMuted">{formatDateTime(log.timestamp)}</AppText>
                 </View>
                 <AppBadge
-                  label={log.status}
+                  label={log.status === 'success' ? 'Berhasil' : 'Gagal'}
                   variant={log.status === 'success' ? 'success' : 'error'}
                 />
               </View>

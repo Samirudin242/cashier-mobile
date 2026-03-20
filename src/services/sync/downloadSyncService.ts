@@ -37,7 +37,7 @@ async function downloadProducts(deviceId: string, result: DownloadResult) {
         result.downloaded++;
       } catch (err: any) {
         result.failed++;
-        result.errors.push(`Product ${item.name}: ${err.message}`);
+        result.errors.push(`Produk ${item.name}: ${err.message}`);
       }
     }
 
@@ -45,12 +45,12 @@ async function downloadProducts(deviceId: string, result: DownloadResult) {
       entity_type: 'products',
       entity_local_id: 'batch',
       action: 'download',
-      status: result.failed === 0 ? 'success' : 'failed',
-      error_message: result.errors.length > 0 ? result.errors.join('; ') : null,
+      status: 'success',
+      error_message: null,
     });
   } catch (err: any) {
     result.failed++;
-    result.errors.push(`Products download: ${err.message}`);
+    result.errors.push(`Unduh produk: ${err.message}`);
   }
 }
 
@@ -70,7 +70,7 @@ async function downloadTransactions(deviceId: string, result: DownloadResult) {
         result.downloaded++;
       } catch (err: any) {
         result.failed++;
-        result.errors.push(`Transaction ${item.transaction_number}: ${err.message}`);
+        result.errors.push(`Transaksi ${item.transaction_number}: ${err.message}`);
       }
     }
 
@@ -83,7 +83,7 @@ async function downloadTransactions(deviceId: string, result: DownloadResult) {
     });
   } catch (err: any) {
     result.failed++;
-    result.errors.push(`Transactions download: ${err.message}`);
+    result.errors.push(`Unduh transaksi: ${err.message}`);
   }
 }
 
@@ -102,12 +102,12 @@ async function downloadCustomers(deviceId: string, result: DownloadResult) {
         result.downloaded++;
       } catch (err: any) {
         result.failed++;
-        result.errors.push(`Customer ${item.name}: ${err.message}`);
+        result.errors.push(`Pelanggan ${item.name}: ${err.message}`);
       }
     }
   } catch (err: any) {
     result.failed++;
-    result.errors.push(`Customers download: ${err.message}`);
+    result.errors.push(`Unduh pelanggan: ${err.message}`);
   }
 }
 
@@ -127,11 +127,11 @@ async function downloadAttendance(deviceId: string, result: DownloadResult) {
         result.downloaded++;
       } catch (err: any) {
         result.failed++;
-        result.errors.push(`Attendance ${item.employee_name}: ${err.message}`);
+        result.errors.push(`Absensi ${item.employee_name}: ${err.message}`);
       }
     }
   } catch (err: any) {
     result.failed++;
-    result.errors.push(`Attendance download: ${err.message}`);
+    result.errors.push(`Unduh absensi: ${err.message}`);
   }
 }

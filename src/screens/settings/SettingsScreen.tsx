@@ -22,12 +22,12 @@ export function SettingsScreen() {
 
   const handleClearData = () => {
     Alert.alert(
-      'Clear Local Data',
-      'This will delete ALL local data including unsynced records. This action cannot be undone.',
+      'Hapus Data Lokal',
+      'Ini akan menghapus SEMUA data lokal termasuk data yang belum disinkronkan. Tindakan ini tidak dapat dibatalkan.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Batal', style: 'cancel' },
         {
-          text: 'Clear All',
+          text: 'Hapus Semua',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -42,9 +42,9 @@ export function SettingsScreen() {
                 DELETE FROM salary_slip_metadata;
                 DELETE FROM sync_log;
               `);
-              Alert.alert('Done', 'All local data has been cleared.');
+              Alert.alert('Selesai', 'Semua data lokal telah dihapus.');
             } catch (err: any) {
-              Alert.alert('Error', err.message);
+              Alert.alert('Kesalahan', err.message);
             }
           },
         },
@@ -53,10 +53,10 @@ export function SettingsScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Keluar', 'Apakah Anda yakin ingin keluar?', [
+      { text: 'Batal', style: 'cancel' },
       {
-        text: 'Logout',
+        text: 'Keluar',
         style: 'destructive',
         onPress: () => logout(),
       },
@@ -65,7 +65,7 @@ export function SettingsScreen() {
 
   return (
     <AppScreen scroll>
-      <AppText variant="title" style={styles.pageTitle}>Settings</AppText>
+      <AppText variant="title" style={styles.pageTitle}>Pengaturan</AppText>
 
       <AppCard style={styles.profileCard}>
         <View style={styles.profileRow}>
@@ -74,21 +74,21 @@ export function SettingsScreen() {
           </View>
           <View style={styles.profileInfo}>
             <AppText variant="sectionTitle">{user?.name}</AppText>
-            <AppText variant="captionMuted">Code: {user?.access_code}</AppText>
+            <AppText variant="captionMuted">Kode: {user?.access_code}</AppText>
             <View style={styles.roleBadge}>
               <AppText variant="captionMuted" style={styles.roleText}>
-                {user?.role === 'owner' ? 'Owner' : 'Employee'}
+                {user?.role === 'owner' ? 'Pemilik' : 'Karyawan'}
               </AppText>
             </View>
           </View>
         </View>
       </AppCard>
 
-      <AppSectionHeader title="Store" />
+      <AppSectionHeader title="Toko" />
       <AppCard padded={false} style={styles.listCard}>
         <AppListItem
-          title="Store Info"
-          subtitle={`Store ID: ${user?.store_id ?? 'N/A'}`}
+          title="Info Toko"
+          subtitle={`ID Toko: ${user?.store_id ?? 'N/A'}`}
           left={<Store size={18} color={colors.textSecondary} />}
           showChevron
         />
@@ -98,35 +98,35 @@ export function SettingsScreen() {
       <AppCard padded={false} style={styles.listCard}>
         <AppListItem
           title="Database"
-          subtitle="Local SQLite storage"
+          subtitle="Penyimpanan lokal SQLite"
           left={<Database size={18} color={colors.textSecondary} />}
         />
         <AppListItem
-          title="Clear Local Data"
-          subtitle="Delete all local records"
+          title="Hapus Data Lokal"
+          subtitle="Hapus semua data lokal"
           left={<Trash2 size={18} color={colors.error} />}
           onPress={handleClearData}
           showChevron
         />
       </AppCard>
 
-      <AppSectionHeader title="About" />
+      <AppSectionHeader title="Tentang" />
       <AppCard padded={false} style={styles.listCard}>
         <AppListItem
-          title="Version"
+          title="Versi"
           subtitle="1.0.0"
           left={<Info size={18} color={colors.textSecondary} />}
         />
         <AppListItem
-          title="Privacy"
-          subtitle="All data stored locally"
+          title="Privasi"
+          subtitle="Semua data tersimpan di perangkat"
           left={<Shield size={18} color={colors.textSecondary} />}
         />
       </AppCard>
 
       <View style={styles.logoutSection}>
         <AppButton
-          title="Logout"
+          title="Keluar"
           onPress={handleLogout}
           variant="danger"
           icon={<LogOut size={18} color={colors.textInverse} />}

@@ -40,21 +40,21 @@ export function ReportsScreen() {
 
   return (
     <AppScreen scroll>
-      <AppText variant="title" style={styles.pageTitle}>Reports</AppText>
+      <AppText variant="title" style={styles.pageTitle}>Laporan</AppText>
 
       <View style={styles.statsRow}>
         <AppStatCard
-          title="Today's Revenue"
+          title="Pendapatan Hari Ini"
           value={formatCurrency(todayStats.total)}
-          subtitle={`${todayStats.count} transactions`}
+          subtitle={`${todayStats.count} transaksi`}
           icon={<DollarSign size={16} color={colors.success} />}
           accentColor={colors.success}
         />
         <View style={{ width: spacing.md }} />
         <AppStatCard
-          title="Total Products"
+          title="Total Produk"
           value={String(productCount)}
-          subtitle="Active items"
+          subtitle="Produk aktif"
           icon={<ShoppingCart size={16} color={colors.primary} />}
           accentColor={colors.primary}
         />
@@ -62,27 +62,27 @@ export function ReportsScreen() {
 
       <View style={[styles.statsRow, { marginTop: spacing.md }]}>
         <AppStatCard
-          title="7-Day Revenue"
+          title="Pendapatan 7 Hari"
           value={formatCurrency(weekTotal)}
-          subtitle={`${weekCount} transactions`}
+          subtitle={`${weekCount} transaksi`}
           icon={<TrendingUp size={16} color={colors.warning} />}
           accentColor={colors.warning}
         />
         <View style={{ width: spacing.md }} />
         <AppStatCard
-          title="Daily Average"
+          title="Rata-rata Harian"
           value={formatCurrency(avgPerDay)}
-          subtitle="Per day"
+          subtitle="Per hari"
           icon={<BarChart3 size={16} color={colors.primaryDark} />}
           accentColor={colors.primaryDark}
         />
       </View>
 
-      <AppSectionHeader title="Daily Breakdown" />
+      <AppSectionHeader title="Rincian Harian" />
       {dailySummary.length === 0 ? (
         <AppCard style={styles.emptyCard}>
           <AppText variant="captionMuted" style={{ textAlign: 'center' }}>
-            No transaction data yet
+            Belum ada data transaksi
           </AppText>
         </AppCard>
       ) : (
@@ -94,7 +94,7 @@ export function ReportsScreen() {
               </View>
               <View style={styles.dayInfo}>
                 <AppText variant="bodyMedium">{formatDate(day.date)}</AppText>
-                <AppText variant="captionMuted">{day.count} transactions</AppText>
+                <AppText variant="captionMuted">{day.count} transaksi</AppText>
               </View>
               <AppText variant="bodySemibold" style={{ color: colors.primary }}>
                 {formatCurrency(day.total)}

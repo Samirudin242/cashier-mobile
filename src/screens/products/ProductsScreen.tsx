@@ -45,7 +45,7 @@ export function ProductsScreen() {
           <AppText variant="bodyMedium" numberOfLines={1}>{item.name}</AppText>
           <View style={styles.productMeta}>
             <AppText variant="captionMuted">SKU: {item.sku}</AppText>
-            <AppText variant="captionMuted"> · Stock: {item.stock}</AppText>
+            <AppText variant="captionMuted"> · Stok: {item.stock}</AppText>
           </View>
         </View>
         <View style={styles.productRight}>
@@ -62,14 +62,14 @@ export function ProductsScreen() {
     <AppScreen scroll={false} padded={false}>
       <View style={styles.searchBar}>
         <AppInput
-          placeholder="Search products..."
+          placeholder="Cari produk..."
           value={searchQuery}
           onChangeText={setSearchQuery}
           icon={<Search size={18} color={colors.textMuted} />}
           containerStyle={styles.searchInput}
         />
         <AppButton
-          title="Add"
+          title="Tambah"
           onPress={() => navigation.navigate('ProductForm')}
           icon={<Plus size={16} color={colors.textInverse} />}
           size="md"
@@ -86,9 +86,9 @@ export function ProductsScreen() {
           !loading ? (
             <AppEmptyState
               icon={<Package size={48} color={colors.textMuted} />}
-              title="No Products"
-              message="Add your first product to get started"
-              actionLabel="Add Product"
+              title="Belum Ada Produk"
+              message="Tambahkan produk pertama Anda untuk memulai"
+              actionLabel="Tambah Produk"
               onAction={() => navigation.navigate('ProductForm')}
             />
           ) : null

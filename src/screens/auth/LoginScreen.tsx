@@ -18,10 +18,12 @@ export function LoginScreen() {
     try {
       const result = await loginWithCode(code);
       if (!result.success) {
-        setError(result.error ?? 'Login failed');
+        setError(result.error ?? 'Gagal masuk');
       }
-    } catch {
-      setError('Something went wrong. Please try again.');
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      console.error('[LoginScreen] Error:', msg);
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -37,16 +39,16 @@ export function LoginScreen() {
           <View style={styles.logoContainer}>
             <Store size={36} color={colors.primary} />
           </View>
-          <AppText variant="titleLarge" style={styles.title}>Cashier POS</AppText>
+          <AppText variant="titleLarge" style={styles.title}>Kasir POS</AppText>
           <AppText variant="caption" style={styles.subtitle}>
-            Enter your access code to sign in
+            Masukkan kode akses untuk masuk
           </AppText>
         </View>
 
         <AppCard style={styles.form}>
           <AppInput
-            label="Access Code"
-            placeholder="Enter your code"
+            label="Kode Akses"
+            placeholder="Masukkan kode Anda"
             value={code}
             onChangeText={(v) => { setCode(v); setError(''); }}
             autoCapitalize="characters"
@@ -56,7 +58,7 @@ export function LoginScreen() {
           />
 
           <AppButton
-            title="Sign In"
+            title="Masuk"
             onPress={handleLogin}
             loading={loading}
             disabled={!code.trim()}
@@ -68,8 +70,8 @@ export function LoginScreen() {
         </AppCard>
 
         <AppText variant="captionMuted" style={styles.footer}>
-          Your access code determines your role in the app.{'\n'}
-          Session persists until you manually logout.
+          Kode akses menentukan peran Anda di aplikasi.{'\n'}
+          Sesi tetap aktif sampai Anda logout.
         </AppText>
       </KeyboardAvoidingView>
     </AppScreen>

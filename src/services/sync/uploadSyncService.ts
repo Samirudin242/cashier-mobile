@@ -34,8 +34,8 @@ async function uploadProducts(result: SyncResult) {
         cost_price: product.cost_price,
         stock: product.stock,
         category: product.category,
-        is_active: product.is_active,
-        is_deleted: product.is_deleted,
+        is_active: !!product.is_active,
+        is_deleted: !!product.is_deleted,
         device_id: product.device_id,
         created_by: product.created_by,
         updated_by: product.updated_by,
@@ -49,7 +49,7 @@ async function uploadProducts(result: SyncResult) {
         const { error } = await supabase.from('products').update(payload).eq('id', cloudId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('products').insert(payload).select('id').single();
+        const { data, error } = await supabase.from('products').insert(payload).select().single();
         if (error) throw error;
         cloudId = data.id;
       }
@@ -64,7 +64,7 @@ async function uploadProducts(result: SyncResult) {
       });
       result.uploaded++;
     } catch (err: any) {
-      const msg = err?.message || 'Unknown error';
+      const msg = err?.message || 'Kesalahan tidak diketahui';
       await productRepository.markFailed(product.local_id, msg);
       await syncRepository.logEntry({
         entity_type: 'products',
@@ -74,7 +74,7 @@ async function uploadProducts(result: SyncResult) {
         error_message: msg,
       });
       result.failed++;
-      result.errors.push(`Product ${product.name}: ${msg}`);
+      result.errors.push(`Produk ${product.name}: ${msg}`);
     }
   }
 }
@@ -97,6 +97,7 @@ async function uploadTransactions(result: SyncResult) {
         payment_method: txn.payment_method,
         notes: txn.notes,
         transaction_date: txn.transaction_date,
+        is_deleted: !!txn.is_deleted,
         device_id: txn.device_id,
         created_by: txn.created_by,
         updated_by: txn.updated_by,
@@ -110,7 +111,7 @@ async function uploadTransactions(result: SyncResult) {
         const { error } = await supabase.from('transactions').update(payload).eq('id', cloudId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('transactions').insert(payload).select('id').single();
+        const { data, error } = await supabase.from('transactions').insert(payload).select().single();
         if (error) throw error;
         cloudId = data.id;
       }
@@ -125,7 +126,7 @@ async function uploadTransactions(result: SyncResult) {
       });
       result.uploaded++;
     } catch (err: any) {
-      const msg = err?.message || 'Unknown error';
+      const msg = err?.message || 'Kesalahan tidak diketahui';
       await transactionRepository.markFailed(txn.local_id, msg);
       await syncRepository.logEntry({
         entity_type: 'transactions',
@@ -135,7 +136,7 @@ async function uploadTransactions(result: SyncResult) {
         error_message: msg,
       });
       result.failed++;
-      result.errors.push(`Transaction ${txn.transaction_number}: ${msg}`);
+      result.errors.push(`Transaksi ${txn.transaction_number}: ${msg}`);
     }
   }
 }
@@ -152,6 +153,7 @@ async function uploadCustomers(result: SyncResult) {
         address: customer.address,
         total_transactions: customer.total_transactions,
         total_spent: customer.total_spent,
+        is_deleted: !!customer.is_deleted,
         device_id: customer.device_id,
         created_by: customer.created_by,
         updated_by: customer.updated_by,
@@ -165,7 +167,7 @@ async function uploadCustomers(result: SyncResult) {
         const { error } = await supabase.from('customers').update(payload).eq('id', cloudId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('customers').insert(payload).select('id').single();
+        const { data, error } = await supabase.from('customers').insert(payload).select().single();
         if (error) throw error;
         cloudId = data.id;
       }
@@ -180,7 +182,7 @@ async function uploadCustomers(result: SyncResult) {
       });
       result.uploaded++;
     } catch (err: any) {
-      const msg = err?.message || 'Unknown error';
+      const msg = err?.message || 'Kesalahan tidak diketahui';
       await customerRepository.markFailed(customer.local_id, msg);
       await syncRepository.logEntry({
         entity_type: 'customers',
@@ -190,7 +192,7 @@ async function uploadCustomers(result: SyncResult) {
         error_message: msg,
       });
       result.failed++;
-      result.errors.push(`Customer ${customer.name}: ${msg}`);
+      result.errors.push(`Pelanggan ${customer.name}: ${msg}`);
     }
   }
 }
@@ -208,6 +210,7 @@ async function uploadAttendance(result: SyncResult) {
         date: attendance.date,
         notes: attendance.notes,
         status: attendance.status,
+        is_deleted: !!attendance.is_deleted,
         device_id: attendance.device_id,
         created_by: attendance.created_by,
         updated_by: attendance.updated_by,
@@ -221,7 +224,7 @@ async function uploadAttendance(result: SyncResult) {
         const { error } = await supabase.from('attendance').update(payload).eq('id', cloudId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('attendance').insert(payload).select('id').single();
+        const { data, error } = await supabase.from('attendance').insert(payload).select().single();
         if (error) throw error;
         cloudId = data.id;
       }
@@ -236,7 +239,7 @@ async function uploadAttendance(result: SyncResult) {
       });
       result.uploaded++;
     } catch (err: any) {
-      const msg = err?.message || 'Unknown error';
+      const msg = err?.message || 'Kesalahan tidak diketahui';
       await attendanceRepository.markFailed(attendance.local_id, msg);
       await syncRepository.logEntry({
         entity_type: 'attendance',
@@ -246,7 +249,7 @@ async function uploadAttendance(result: SyncResult) {
         error_message: msg,
       });
       result.failed++;
-      result.errors.push(`Attendance ${attendance.employee_name}: ${msg}`);
+      result.errors.push(`Absensi ${attendance.employee_name}: ${msg}`);
     }
   }
 }

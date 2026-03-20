@@ -48,17 +48,17 @@ function ProductsStack() {
       <Stack.Screen
         name="ProductsList"
         component={ProductsScreen}
-        options={{ title: "Products" }}
+        options={{ title: "Produk" }}
       />
       <Stack.Screen
         name="ProductForm"
         component={ProductFormScreen}
-        options={{ title: "Product" }}
+        options={{ title: "Produk" }}
       />
       <Stack.Screen
         name="ProductDetail"
         component={ProductDetailScreen}
-        options={{ title: "Product Detail" }}
+        options={{ title: "Detail Produk" }}
       />
     </Stack.Navigator>
   );
@@ -70,12 +70,12 @@ function TransactionsStack() {
       <Stack.Screen
         name="TransactionsList"
         component={TransactionsScreen}
-        options={{ title: "Transactions" }}
+        options={{ title: "Transaksi" }}
       />
       <Stack.Screen
         name="TransactionDetail"
         component={TransactionDetailScreen}
-        options={{ title: "Transaction" }}
+        options={{ title: "Detail Transaksi" }}
       />
     </Stack.Navigator>
   );
@@ -87,12 +87,12 @@ function CheckoutStack() {
       <Stack.Screen
         name="Checkout"
         component={CheckoutScreen}
-        options={{ title: "New Sale" }}
+        options={{ title: "Penjualan Baru" }}
       />
       <Stack.Screen
         name="CartReview"
         component={CartReviewScreen}
-        options={{ title: "Review Cart" }}
+        options={{ title: "Ringkasan Keranjang" }}
       />
       <Stack.Screen
         name="TransactionSuccess"
@@ -109,7 +109,7 @@ function AttendanceStack() {
       <Stack.Screen
         name="AttendanceMain"
         component={AttendanceScreen}
-        options={{ title: "Attendance" }}
+        options={{ title: "Absensi" }}
       />
     </Stack.Navigator>
   );
@@ -151,7 +151,7 @@ function EmployeeTabs() {
         name="HomeTab"
         component={HomeStack}
         options={{
-          tabBarLabel: "Home",
+          tabBarLabel: "Beranda",
           tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
@@ -159,7 +159,7 @@ function EmployeeTabs() {
         name="ProductsTab"
         component={ProductsStack}
         options={{
-          tabBarLabel: "Products",
+          tabBarLabel: "Produk",
           tabBarIcon: ({ color, size }) => (
             <Package size={size} color={color} />
           ),
@@ -169,7 +169,7 @@ function EmployeeTabs() {
         name="CheckoutStack"
         component={CheckoutStack}
         options={{
-          tabBarLabel: "Sale",
+          tabBarLabel: "Kasir",
           tabBarIcon: ({ color, size }) => (
             <ShoppingCart size={size} color={color} />
           ),
@@ -179,7 +179,7 @@ function EmployeeTabs() {
         name="TransactionsTab"
         component={TransactionsStack}
         options={{
-          tabBarLabel: "History",
+          tabBarLabel: "Riwayat",
           tabBarIcon: ({ color, size }) => (
             <ArrowRightLeft size={size} color={color} />
           ),
@@ -191,7 +191,7 @@ function EmployeeTabs() {
         options={{
           ...screenOptions,
           headerShown: false,
-          tabBarLabel: "Sync",
+          tabBarLabel: "Sinkron",
           tabBarIcon: ({ color, size }) => (
             <RefreshCw size={size} color={color} />
           ),
@@ -202,7 +202,7 @@ function EmployeeTabs() {
         component={ProfileScreen}
         options={{
           headerShown: false,
-          tabBarLabel: "Profile",
+          tabBarLabel: "Profil",
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
         }}
       />
@@ -217,7 +217,7 @@ function OwnerTabs() {
         name="HomeTab"
         component={HomeStack}
         options={{
-          tabBarLabel: "Dashboard",
+          tabBarLabel: "Dasbor",
           tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
         }}
       />
@@ -225,7 +225,7 @@ function OwnerTabs() {
         name="ProductsTab"
         component={ProductsStack}
         options={{
-          tabBarLabel: "Products",
+          tabBarLabel: "Produk",
           tabBarIcon: ({ color, size }) => (
             <Package size={size} color={color} />
           ),
@@ -235,7 +235,7 @@ function OwnerTabs() {
         name="TransactionsTab"
         component={TransactionsStack}
         options={{
-          tabBarLabel: "Transactions",
+          tabBarLabel: "Transaksi",
           tabBarIcon: ({ color, size }) => (
             <ArrowRightLeft size={size} color={color} />
           ),
@@ -246,7 +246,7 @@ function OwnerTabs() {
         component={ReportsScreen}
         options={{
           headerShown: false,
-          tabBarLabel: "Reports",
+          tabBarLabel: "Laporan",
           tabBarIcon: ({ color, size }) => (
             <BarChart3 size={size} color={color} />
           ),
@@ -257,7 +257,7 @@ function OwnerTabs() {
         component={SyncCenterScreen}
         options={{
           headerShown: false,
-          tabBarLabel: "Sync",
+          tabBarLabel: "Sinkron",
           tabBarIcon: ({ color, size }) => (
             <RefreshCw size={size} color={color} />
           ),
@@ -268,7 +268,7 @@ function OwnerTabs() {
         component={SettingsScreen}
         options={{
           headerShown: false,
-          tabBarLabel: "Settings",
+          tabBarLabel: "Pengaturan",
           tabBarIcon: ({ color, size }) => (
             <Settings size={size} color={color} />
           ),

@@ -12,7 +12,7 @@ export function TransactionSuccessScreen() {
   const { total, transactionNumber } = route.params;
 
   const handleWhatsApp = () => {
-    const message = `Receipt: ${transactionNumber}\nTotal: ${formatCurrency(total)}\n\nThank you for your purchase!`;
+    const message = `Struk: ${transactionNumber}\nTotal: ${formatCurrency(total)}\n\nTerima kasih atas pembelian Anda!`;
     const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
     Linking.openURL(url).catch(() => {});
   };
@@ -28,11 +28,11 @@ export function TransactionSuccessScreen() {
           <CheckCircle size={64} color={colors.success} />
         </View>
 
-        <AppText variant="titleLarge" style={styles.title}>Transaction Complete!</AppText>
+        <AppText variant="titleLarge" style={styles.title}>Transaksi Berhasil!</AppText>
         <AppText variant="captionMuted" style={styles.txnNumber}>{transactionNumber}</AppText>
 
         <AppCard style={styles.totalCard}>
-          <AppText variant="caption" style={styles.totalLabel}>Total Payment</AppText>
+          <AppText variant="caption" style={styles.totalLabel}>Total Pembayaran</AppText>
           <AppText variant="numberLarge" style={styles.totalValue}>
             {formatCurrency(total)}
           </AppText>
@@ -40,7 +40,7 @@ export function TransactionSuccessScreen() {
 
         <View style={styles.actions}>
           <AppButton
-            title="Print Receipt"
+            title="Cetak Struk"
             onPress={() => {}}
             variant="outline"
             icon={<Printer size={18} color={colors.text} />}
@@ -48,7 +48,7 @@ export function TransactionSuccessScreen() {
             size="lg"
           />
           <AppButton
-            title="Send via WhatsApp"
+            title="Kirim via WhatsApp"
             onPress={handleWhatsApp}
             variant="secondary"
             icon={<MessageCircle size={18} color={colors.primary} />}
@@ -57,7 +57,7 @@ export function TransactionSuccessScreen() {
             style={styles.actionGap}
           />
           <AppButton
-            title="Back to Home"
+            title="Kembali ke Beranda"
             onPress={handleHome}
             icon={<Home size={18} color={colors.textInverse} />}
             fullWidth
