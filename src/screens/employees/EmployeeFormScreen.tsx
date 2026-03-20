@@ -11,7 +11,7 @@ export function EmployeeFormScreen() {
   const route = useRoute<any>();
   const editId = route.params?.employeeId as string | undefined;
 
-  const [form, setForm] = useState({ name: '', accessCode: '', dailySalary: '' });
+  const [form, setForm] = useState({ name: '', accessCode: '', dailySalary: '', bonusPercent: '10' });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -23,6 +23,7 @@ export function EmployeeFormScreen() {
             name: emp.name,
             accessCode: emp.access_code,
             dailySalary: String(emp.daily_salary),
+            bonusPercent: String(emp.bonus_percent ?? 10),
           });
         }
       })();
@@ -39,6 +40,7 @@ export function EmployeeFormScreen() {
       return;
     }
     const salary = parseFloat(form.dailySalary) || 0;
+    const bonusPct = parseFloat(form.bonusPercent) || 0;
 
     setLoading(true);
     try {
@@ -46,6 +48,7 @@ export function EmployeeFormScreen() {
         await userRepository.updateEmployee(editId, {
           name: form.name.trim(),
           dailySalary: salary,
+          bonusPercent: bonusPct,
         });
       } else {
         const existing = await userRepository.findByAccessCode(form.accessCode);
@@ -58,6 +61,7 @@ export function EmployeeFormScreen() {
           name: form.name.trim(),
           accessCode: form.accessCode.trim(),
           dailySalary: salary,
+          bonusPercent: bonusPct,
         });
       }
       navigation.goBack();
@@ -90,6 +94,13 @@ export function EmployeeFormScreen() {
           placeholder="0"
           value={form.dailySalary}
           onChangeText={(v) => setForm((p) => ({ ...p, dailySalary: v }))}
+          keyboardType="numeric"
+        />
+        <AppInput
+          label="Persentase Bonus (%)"
+          placeholder="cth. 10"
+          value={form.bonusPercent}
+          onChangeText={(v) => setForm((p) => ({ ...p, bonusPercent: v }))}
           keyboardType="numeric"
         />
       </AppCard>

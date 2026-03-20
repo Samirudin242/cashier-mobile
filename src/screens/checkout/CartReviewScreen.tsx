@@ -1,38 +1,55 @@
-import React, { useState } from 'react';
-import { View, FlatList, StyleSheet, Pressable, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, FlatList, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Minus, Plus, Trash2, CreditCard, Banknote, QrCode } from 'lucide-react-native';
+import { Minus, Plus, Trash2, CreditCard, Banknote, QrCode, ChevronDown, Check, UserCheck } from 'lucide-react-native';
 import { AppScreen, AppCard, AppText, AppInput, AppButton } from '../../components/ui';
 import { useCartStore } from '../../stores/cartStore';
 import { useAuthStore } from '../../stores/authStore';
 import { transactionRepository } from '../../repositories/transactionRepository';
+import { userRepository } from '../../repositories/userRepository';
 import { formatCurrency } from '../../utils/helpers';
-import { CartItem } from '../../types';
+import { CartItem, User } from '../../types';
 import { colors, spacing, radius } from '../../config/theme';
 
 export function CartReviewScreen() {
   const navigation = useNavigation<any>();
   const {
     items, customerName, customerWhatsapp, paymentMethod, discount, notes,
+    handlerEmployeeId, handlerEmployeeName,
     updateQuantity, removeItem, setCustomerName, setCustomerWhatsapp,
-    setPaymentMethod, setDiscount, setNotes, getSubtotal, getTotal, clear,
+    setPaymentMethod, setDiscount, setNotes, setHandlerEmployee, getSubtotal, getTotal, clear,
   } = useCartStore();
   const { user, deviceId } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [employees, setEmployees] = useState<User[]>([]);
+  const [showEmployeePicker, setShowEmployeePicker] = useState(false);
+
+  useEffect(() => {
+    userRepository.getEmployees().then((emps) => {
+      setEmployees(emps);
+      if (!handlerEmployeeId && emps.length > 0) {
+        setHandlerEmployee(emps[0].id, emps[0].name);
+      }
+    });
+  }, []);
 
   const subtotal = getSubtotal();
   const total = getTotal();
 
   const handleComplete = async () => {
     if (items.length === 0) return;
+    if (!handlerEmployeeId) {
+      Alert.alert('Validasi', 'Pilih karyawan yang menangani pelanggan');
+      return;
+    }
     setLoading(true);
     try {
       const txn = await transactionRepository.create({
         items,
         customer_name: customerName || undefined,
         customer_whatsapp: customerWhatsapp || undefined,
-        employee_id: user!.id,
-        employee_name: user!.name,
+        employee_id: handlerEmployeeId,
+        employee_name: handlerEmployeeName,
         discount,
         payment_method: paymentMethod,
         notes: notes || undefined,
@@ -89,6 +106,60 @@ export function CartReviewScreen() {
         keyExtractor={(item) => item.product.local_id}
         scrollEnabled={false}
       />
+
+      <AppCard style={styles.section}>
+        <AppText variant="sectionTitle" style={styles.sectionTitle}>Karyawan Penanganan</AppText>
+        <View style={styles.fieldGroup}>
+          <Pressable
+            style={styles.dropdown}
+            onPress={() => setShowEmployeePicker(!showEmployeePicker)}
+          >
+            <View style={styles.dropdownLeft}>
+              <UserCheck size={16} color={handlerEmployeeId ? colors.primary : colors.textMuted} />
+              <AppText
+                variant="body"
+                style={handlerEmployeeName ? styles.dropdownText : styles.dropdownPlaceholder}
+              >
+                {handlerEmployeeName || 'Pilih karyawan...'}
+              </AppText>
+            </View>
+            <ChevronDown size={18} color={colors.textMuted} />
+          </Pressable>
+
+          {showEmployeePicker && (
+            <View style={styles.pickerList}>
+              <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
+                {employees.map((emp) => {
+                  const selected = handlerEmployeeId === emp.id;
+                  return (
+                    <Pressable
+                      key={emp.id}
+                      style={[styles.pickerItem, selected && styles.pickerItemSelected]}
+                      onPress={() => {
+                        setHandlerEmployee(emp.id, emp.name);
+                        setShowEmployeePicker(false);
+                      }}
+                    >
+                      <View>
+                        <AppText variant="body" style={selected ? styles.pickerTextSelected : undefined}>
+                          {emp.name}
+                        </AppText>
+                        <AppText variant="captionMuted">Bonus: {emp.bonus_percent}%</AppText>
+                      </View>
+                      {selected && <Check size={16} color={colors.primary} />}
+                    </Pressable>
+                  );
+                })}
+                {employees.length === 0 && (
+                  <AppText variant="captionMuted" style={styles.pickerEmpty}>
+                    Belum ada karyawan terdaftar
+                  </AppText>
+                )}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </AppCard>
 
       <AppCard style={styles.section}>
         <AppText variant="sectionTitle" style={styles.sectionTitle}>Info Pelanggan</AppText>
@@ -283,5 +354,61 @@ const styles = StyleSheet.create({
   actions: {
     marginTop: spacing.xl,
     paddingBottom: spacing.xxxl,
+  },
+  fieldGroup: {
+    marginBottom: spacing.xs,
+  },
+  dropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 46,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.background,
+  },
+  dropdownLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  dropdownText: {
+    color: colors.text,
+  },
+  dropdownPlaceholder: {
+    color: colors.textMuted,
+  },
+  pickerList: {
+    marginTop: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    overflow: 'hidden',
+  },
+  pickerScroll: {
+    maxHeight: 200,
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  pickerItemSelected: {
+    backgroundColor: colors.primaryLight,
+  },
+  pickerTextSelected: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  pickerEmpty: {
+    padding: spacing.lg,
+    textAlign: 'center',
   },
 });

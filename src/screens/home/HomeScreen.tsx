@@ -85,7 +85,7 @@ export function HomeScreen() {
       </View>
 
       {stats.pendingSync > 0 && (
-        <Pressable onPress={() => navigation.navigate('SyncTab')}>
+        <Pressable onPress={() => navigation.navigate(user?.role === 'owner' ? 'SyncStack' : 'SyncTab')}>
           <AppCard style={styles.syncBanner}>
             <View style={styles.syncBannerContent}>
               <ArrowRightLeft size={18} color={colors.warning} />

@@ -37,6 +37,7 @@ export function EmployeeListScreen() {
             <AppText variant="bodySemibold" style={styles.salaryValue}>
               {formatCurrency(item.daily_salary)}
             </AppText>
+            <AppText variant="caption" style={styles.bonusLabel}>Bonus: {item.bonus_percent}%</AppText>
           </View>
           <ChevronRight size={18} color={colors.textMuted} />
         </View>
@@ -45,7 +46,7 @@ export function EmployeeListScreen() {
   );
 
   return (
-    <AppScreen>
+    <AppScreen scroll={false} padded={false}>
       <View style={styles.header}>
         <AppText variant="title">Karyawan</AppText>
         <AppButton
@@ -122,5 +123,9 @@ const styles = StyleSheet.create({
   salaryValue: {
     color: colors.success,
     fontSize: 14,
+  },
+  bonusLabel: {
+    fontSize: 10,
+    color: colors.warning,
   },
 });

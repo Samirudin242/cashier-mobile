@@ -32,6 +32,7 @@ async function uploadProducts(result: SyncResult) {
         sku: product.sku,
         price: product.price,
         cost_price: product.cost_price,
+        handling_fee: product.handling_fee,
         stock: product.stock,
         category: product.category,
         is_active: !!product.is_active,

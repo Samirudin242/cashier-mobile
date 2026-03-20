@@ -24,6 +24,7 @@ export function ProductFormScreen() {
     sku: '',
     price: '',
     cost_price: '',
+    handling_fee: '',
     stock: '',
     category: '',
   });
@@ -41,6 +42,7 @@ export function ProductFormScreen() {
             sku: p.sku,
             price: String(p.price),
             cost_price: String(p.cost_price),
+            handling_fee: String(p.handling_fee || 0),
             stock: String(p.stock),
             category: p.category,
           });
@@ -65,6 +67,7 @@ export function ProductFormScreen() {
             sku: form.sku.trim(),
             price: parseFloat(form.price) || 0,
             cost_price: parseFloat(form.cost_price) || 0,
+            handling_fee: parseFloat(form.handling_fee) || 0,
             stock: parseInt(form.stock) || 0,
             category: form.category.trim(),
           },
@@ -76,6 +79,7 @@ export function ProductFormScreen() {
           sku: form.sku.trim() || `SKU-${Date.now()}`,
           price: parseFloat(form.price) || 0,
           cost_price: parseFloat(form.cost_price) || 0,
+          handling_fee: parseFloat(form.handling_fee) || 0,
           stock: parseInt(form.stock) || 0,
           category: form.category.trim() || 'Umum',
           device_id: deviceId,
@@ -128,6 +132,14 @@ export function ProductFormScreen() {
             containerStyle={styles.halfInput}
           />
         </View>
+
+        <AppInput
+          label="Biaya Penanganan (Rp)"
+          placeholder="0"
+          value={form.handling_fee}
+          onChangeText={(v) => setForm({ ...form, handling_fee: v })}
+          keyboardType="numeric"
+        />
 
         <AppInput
           label="Stok"

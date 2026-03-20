@@ -63,9 +63,9 @@ export const transactionRepository = {
         const itemId = generateLocalId();
         const itemSubtotal = item.product.price * item.quantity;
         await txn.runAsync(
-          `INSERT INTO transaction_items (local_id, transaction_local_id, product_local_id, product_name, product_price, quantity, subtotal)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [itemId, txnId, item.product.local_id, item.product.name, item.product.price, item.quantity, itemSubtotal]
+          `INSERT INTO transaction_items (local_id, transaction_local_id, product_local_id, product_name, product_price, handling_fee, quantity, subtotal)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [itemId, txnId, item.product.local_id, item.product.name, item.product.price, item.product.handling_fee ?? 0, item.quantity, itemSubtotal]
         );
 
         await txn.runAsync(
@@ -193,6 +193,7 @@ function mapRowToItem(row: any): TransactionItem {
     product_local_id: row.product_local_id,
     product_name: row.product_name,
     product_price: row.product_price,
+    handling_fee: row.handling_fee ?? 0,
     quantity: row.quantity,
     subtotal: row.subtotal,
   };

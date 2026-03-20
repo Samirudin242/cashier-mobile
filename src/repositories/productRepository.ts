@@ -42,6 +42,7 @@ export const productRepository = {
     sku: string;
     price: number;
     cost_price: number;
+    handling_fee: number;
     stock: number;
     category: string;
     device_id: string;
@@ -52,15 +53,15 @@ export const productRepository = {
     const localId = generateLocalId();
 
     await db.runAsync(
-      `INSERT INTO products (local_id, name, sku, price, cost_price, stock, category, is_active, sync_status, created_at_local, updated_at_local, device_id, created_by, updated_by, is_deleted)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'pending_upload', ?, ?, ?, ?, ?, 0)`,
-      [localId, data.name, data.sku, data.price, data.cost_price, data.stock, data.category, now, now, data.device_id, data.user_id, data.user_id]
+      `INSERT INTO products (local_id, name, sku, price, cost_price, handling_fee, stock, category, is_active, sync_status, created_at_local, updated_at_local, device_id, created_by, updated_by, is_deleted)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'pending_upload', ?, ?, ?, ?, ?, 0)`,
+      [localId, data.name, data.sku, data.price, data.cost_price, data.handling_fee, data.stock, data.category, now, now, data.device_id, data.user_id, data.user_id]
     );
 
     return (await this.getById(localId))!;
   },
 
-  async update(localId: string, data: Partial<Pick<Product, 'name' | 'sku' | 'price' | 'cost_price' | 'stock' | 'category' | 'is_active'>>, userId: string): Promise<Product | null> {
+  async update(localId: string, data: Partial<Pick<Product, 'name' | 'sku' | 'price' | 'cost_price' | 'handling_fee' | 'stock' | 'category' | 'is_active'>>, userId: string): Promise<Product | null> {
     const db = await getDatabase();
     const now = nowISO();
     const fields: string[] = [];
@@ -70,6 +71,7 @@ export const productRepository = {
     if (data.sku !== undefined) { fields.push('sku = ?'); values.push(data.sku); }
     if (data.price !== undefined) { fields.push('price = ?'); values.push(data.price); }
     if (data.cost_price !== undefined) { fields.push('cost_price = ?'); values.push(data.cost_price); }
+    if (data.handling_fee !== undefined) { fields.push('handling_fee = ?'); values.push(data.handling_fee); }
     if (data.stock !== undefined) { fields.push('stock = ?'); values.push(data.stock); }
     if (data.category !== undefined) { fields.push('category = ?'); values.push(data.category); }
     if (data.is_active !== undefined) { fields.push('is_active = ?'); values.push(data.is_active ? 1 : 0); }
@@ -163,6 +165,7 @@ function mapRowToProduct(row: any): Product {
     sku: row.sku,
     price: row.price,
     cost_price: row.cost_price,
+    handling_fee: row.handling_fee ?? 0,
     stock: row.stock,
     category: row.category,
     image_url: row.image_url,

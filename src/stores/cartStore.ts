@@ -8,6 +8,8 @@ interface CartState {
   paymentMethod: 'cash' | 'transfer' | 'qris';
   discount: number;
   notes: string;
+  handlerEmployeeId: string;
+  handlerEmployeeName: string;
 
   addItem: (product: Product) => void;
   removeItem: (productLocalId: string) => void;
@@ -17,6 +19,7 @@ interface CartState {
   setPaymentMethod: (method: 'cash' | 'transfer' | 'qris') => void;
   setDiscount: (discount: number) => void;
   setNotes: (notes: string) => void;
+  setHandlerEmployee: (id: string, name: string) => void;
   clear: () => void;
 
   getSubtotal: () => number;
@@ -31,6 +34,8 @@ export const useCartStore = create<CartState>((set, get) => ({
   paymentMethod: 'cash',
   discount: 0,
   notes: '',
+  handlerEmployeeId: '',
+  handlerEmployeeName: '',
 
   addItem: (product) => {
     const existing = get().items.find((i) => i.product.local_id === product.local_id);
@@ -68,6 +73,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
   setDiscount: (discount) => set({ discount }),
   setNotes: (notes) => set({ notes }),
+  setHandlerEmployee: (id, name) => set({ handlerEmployeeId: id, handlerEmployeeName: name }),
 
   clear: () =>
     set({
@@ -77,6 +83,8 @@ export const useCartStore = create<CartState>((set, get) => ({
       paymentMethod: 'cash',
       discount: 0,
       notes: '',
+      handlerEmployeeId: '',
+      handlerEmployeeName: '',
     }),
 
   getSubtotal: () => get().items.reduce((sum, i) => sum + i.product.price * i.quantity, 0),

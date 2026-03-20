@@ -54,7 +54,7 @@ export function EmployeeSalaryScreen() {
 
     const [attendance, transactions] = await Promise.all([
       userRepository.getEmployeeAttendance(employee.id, start, end),
-      userRepository.getEmployeeTransactionBonus(employee.id, start + 'T00:00:00', end + 'T23:59:59'),
+      userRepository.getEmployeeTransactionBonus(employee.id, start + 'T00:00:00', end + 'T23:59:59', employee.bonus_percent),
     ]);
 
     const daysWorked = attendance.filter((a: any) => a.status === 'present' || a.status === 'late').length;
@@ -143,6 +143,7 @@ export function EmployeeSalaryScreen() {
             <AppText variant="sectionTitle">{employee.name}</AppText>
             <AppText variant="captionMuted">Kode: {employee.access_code}</AppText>
             <AppText variant="caption">Gaji/Hari: {formatCurrency(employee.daily_salary)}</AppText>
+            <AppText variant="caption">Bonus: {employee.bonus_percent}%</AppText>
           </View>
         </View>
         <View style={styles.profileActions}>
@@ -192,7 +193,7 @@ export function EmployeeSalaryScreen() {
 
       <View style={styles.statsRow}>
         <AppStatCard
-          title="Bonus 10%"
+          title={`Bonus ${employee.bonus_percent}%`}
           value={formatCurrency(salary.bonus)}
           subtitle={`${salary.transactions.length} transaksi`}
           icon={<Award size={16} color={colors.warning} />}
@@ -244,10 +245,12 @@ export function EmployeeSalaryScreen() {
             <View style={styles.detailRow}>
               <View style={styles.detailInfo}>
                 <AppText variant="bodyMedium">{t.date.split('T')[0]}</AppText>
-                <AppText variant="captionMuted">Total item: {formatCurrency(t.itemsTotal)}</AppText>
+                <AppText variant="captionMuted">
+                  Item: {formatCurrency(t.itemsTotal)} − Penanganan: {formatCurrency(t.handlingTotal)} = {formatCurrency(t.net)}
+                </AppText>
               </View>
               <View style={styles.bonusCol}>
-                <AppText variant="caption" style={styles.bonusLabel}>Bonus 10%</AppText>
+                <AppText variant="caption" style={styles.bonusLabel}>Bonus {employee.bonus_percent}%</AppText>
                 <AppText variant="bodySemibold" style={styles.bonusValue}>{formatCurrency(t.bonus)}</AppText>
               </View>
             </View>

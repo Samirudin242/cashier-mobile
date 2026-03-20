@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   store_id TEXT NOT NULL DEFAULT 'default_store',
   is_active INTEGER NOT NULL DEFAULT 1,
   daily_salary REAL NOT NULL DEFAULT 0,
+  bonus_percent REAL NOT NULL DEFAULT 10,
   logged_in_device_id TEXT,
   created_at TEXT NOT NULL
 );
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS products (
   device_id TEXT NOT NULL,
   created_by TEXT NOT NULL,
   updated_by TEXT NOT NULL,
+  handling_fee REAL NOT NULL DEFAULT 0,
   is_deleted INTEGER NOT NULL DEFAULT 0
 );
 
@@ -66,6 +68,7 @@ CREATE TABLE IF NOT EXISTS transaction_items (
   product_local_id TEXT NOT NULL,
   product_name TEXT NOT NULL,
   product_price REAL NOT NULL,
+  handling_fee REAL NOT NULL DEFAULT 0,
   quantity INTEGER NOT NULL,
   subtotal REAL NOT NULL,
   FOREIGN KEY (transaction_local_id) REFERENCES transactions(local_id)

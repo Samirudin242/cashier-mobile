@@ -29,6 +29,7 @@ export interface User {
   store_id: string;
   is_active: boolean;
   daily_salary: number;
+  bonus_percent: number;
 }
 
 export interface EmployeeSalary {
@@ -40,7 +41,7 @@ export interface EmployeeSalary {
   totalSalary: number;
   periodStart: string;
   periodEnd: string;
-  transactions: { date: string; itemsTotal: number; bonus: number }[];
+  transactions: { date: string; itemsTotal: number; handlingTotal: number; net: number; bonus: number }[];
   attendanceDetails: { date: string; status: string; clockIn: string; clockOut: string | null }[];
 }
 
@@ -49,6 +50,7 @@ export interface Product extends SyncFields {
   sku: string;
   price: number;
   cost_price: number;
+  handling_fee: number;
   stock: number;
   category: string;
   image_url: string | null;
@@ -77,6 +79,7 @@ export interface TransactionItem {
   product_local_id: string;
   product_name: string;
   product_price: number;
+  handling_fee: number;
   quantity: number;
   subtotal: number;
 }

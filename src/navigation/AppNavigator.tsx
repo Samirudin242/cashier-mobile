@@ -311,7 +311,7 @@ function SyncStack() {
       <Stack.Screen
         name="SyncMain"
         component={SyncCenterScreen}
-        options={{ headerShown: false }}
+        options={{ title: "Pusat Sinkronisasi" }}
       />
     </Stack.Navigator>
   );

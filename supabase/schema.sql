@@ -20,18 +20,20 @@ CREATE TABLE IF NOT EXISTS users (
   role text NOT NULL,
   access_code text NOT NULL UNIQUE,
   store_id text NOT NULL DEFAULT 'default_store',
+  daily_salary numeric NOT NULL DEFAULT 0,
+  bonus_percent numeric NOT NULL DEFAULT 10,
   is_active boolean NOT NULL DEFAULT true,
   logged_in_device_id text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
 -- Seed users (same as local SQLite seed)
-INSERT INTO users (id, name, role, access_code, store_id, is_active, created_at)
+INSERT INTO users (id, name, role, access_code, store_id, is_active, daily_salary, bonus_percent, created_at)
 VALUES
-  ('usr_owner_001',    'Pemilik Toko',   'owner',    'OWNER2024',  'default_store', true, '2024-01-01T00:00:00.000Z'),
-  ('usr_employee_001', 'Kasir Satu',     'employee', 'KASIR001',   'default_store', true, '2024-01-01T00:00:00.000Z'),
-  ('usr_employee_002', 'Kasir Dua',      'employee', 'KASIR002',   'default_store', true, '2024-01-01T00:00:00.000Z'),
-  ('usr_employee_003', 'Kasir Tiga',     'employee', 'KASIR003',   'default_store', true, '2024-01-01T00:00:00.000Z')
+  ('usr_owner_001',    'Pemilik Toko',   'owner',    'OWNER2024',  'default_store', true, 0,     0,  '2024-01-01T00:00:00.000Z'),
+  ('usr_employee_001', 'Kasir Satu',     'employee', 'KASIR001',   'default_store', true, 75000, 10, '2024-01-01T00:00:00.000Z'),
+  ('usr_employee_002', 'Kasir Dua',      'employee', 'KASIR002',   'default_store', true, 75000, 10, '2024-01-01T00:00:00.000Z'),
+  ('usr_employee_003', 'Kasir Tiga',     'employee', 'KASIR003',   'default_store', true, 75000, 10, '2024-01-01T00:00:00.000Z')
 ON CONFLICT (id) DO NOTHING;
 
 -- ========================
@@ -43,6 +45,7 @@ CREATE TABLE IF NOT EXISTS products (
   sku text NOT NULL,
   price numeric NOT NULL DEFAULT 0,
   cost_price numeric NOT NULL DEFAULT 0,
+  handling_fee numeric NOT NULL DEFAULT 0,
   stock integer NOT NULL DEFAULT 0,
   category text NOT NULL DEFAULT '',
   image_url text,
@@ -89,6 +92,7 @@ CREATE TABLE IF NOT EXISTS transaction_items (
   transaction_id uuid REFERENCES transactions(id),
   product_name text NOT NULL,
   product_price numeric NOT NULL,
+  handling_fee numeric NOT NULL DEFAULT 0,
   quantity integer NOT NULL,
   subtotal numeric NOT NULL
 );

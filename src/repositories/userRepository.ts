@@ -38,22 +38,22 @@ export const userRepository = {
     return rows.map(mapRow);
   },
 
-  async createEmployee(data: { name: string; accessCode: string; dailySalary: number; storeId?: string }): Promise<User> {
+  async createEmployee(data: { name: string; accessCode: string; dailySalary: number; bonusPercent: number; storeId?: string }): Promise<User> {
     const db = await getDatabase();
     const id = 'usr_' + generateLocalId().slice(0, 12);
     const code = data.accessCode.trim().toUpperCase();
     await db.runAsync(
-      'INSERT INTO users (id, name, role, access_code, store_id, is_active, daily_salary, created_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?)',
-      [id, data.name.trim(), 'employee', code, data.storeId ?? 'default_store', data.dailySalary, nowISO()]
+      'INSERT INTO users (id, name, role, access_code, store_id, is_active, daily_salary, bonus_percent, created_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)',
+      [id, data.name.trim(), 'employee', code, data.storeId ?? 'default_store', data.dailySalary, data.bonusPercent, nowISO()]
     );
-    return { id, name: data.name.trim(), role: 'employee', access_code: code, store_id: data.storeId ?? 'default_store', is_active: true, daily_salary: data.dailySalary };
+    return { id, name: data.name.trim(), role: 'employee', access_code: code, store_id: data.storeId ?? 'default_store', is_active: true, daily_salary: data.dailySalary, bonus_percent: data.bonusPercent };
   },
 
-  async updateEmployee(id: string, data: { name: string; dailySalary: number }): Promise<void> {
+  async updateEmployee(id: string, data: { name: string; dailySalary: number; bonusPercent: number }): Promise<void> {
     const db = await getDatabase();
     await db.runAsync(
-      'UPDATE users SET name = ?, daily_salary = ? WHERE id = ?',
-      [data.name.trim(), data.dailySalary, id]
+      'UPDATE users SET name = ?, daily_salary = ?, bonus_percent = ? WHERE id = ?',
+      [data.name.trim(), data.dailySalary, data.bonusPercent, id]
     );
   },
 
@@ -70,10 +70,12 @@ export const userRepository = {
     );
   },
 
-  async getEmployeeTransactionBonus(employeeId: string, startDate: string, endDate: string) {
+  async getEmployeeTransactionBonus(employeeId: string, startDate: string, endDate: string, bonusPercent: number) {
     const db = await getDatabase();
     const rows = await db.getAllAsync<any>(
-      `SELECT t.transaction_date, SUM(ti.subtotal) as items_total
+      `SELECT t.transaction_date,
+              SUM(ti.subtotal) as items_total,
+              SUM(ti.handling_fee * ti.quantity) as handling_total
        FROM transactions t
        JOIN transaction_items ti ON ti.transaction_local_id = t.local_id
        WHERE t.employee_id = ? AND t.transaction_date >= ? AND t.transaction_date <= ? AND t.is_deleted = 0
@@ -81,11 +83,19 @@ export const userRepository = {
        ORDER BY t.transaction_date ASC`,
       [employeeId, startDate, endDate]
     );
-    return rows.map((r: any) => ({
-      date: r.transaction_date,
-      itemsTotal: r.items_total as number,
-      bonus: (r.items_total as number) * 0.10,
-    }));
+    const pct = bonusPercent / 100;
+    return rows.map((r: any) => {
+      const itemsTotal = r.items_total as number;
+      const handlingTotal = (r.handling_total as number) ?? 0;
+      const net = Math.max(0, itemsTotal - handlingTotal);
+      return {
+        date: r.transaction_date,
+        itemsTotal,
+        handlingTotal,
+        net,
+        bonus: net * pct,
+      };
+    });
   },
 
   /**
@@ -148,5 +158,6 @@ function mapRow(row: any): User {
     store_id: row.store_id,
     is_active: !!row.is_active,
     daily_salary: row.daily_salary ?? 0,
+    bonus_percent: row.bonus_percent ?? 10,
   };
 }
