@@ -7,6 +7,19 @@ VALUES
   ('usr_employee_003', 'Kasir Tiga',     'employee', 'KASIR003',   'default_store', 1, 75000,  '2024-01-01T00:00:00.000Z');
 `;
 
+export const SEED_CATEGORIES_SQL = `
+INSERT OR IGNORE INTO categories (id, name, sort_order, created_at)
+VALUES
+  ('cat_001', 'Oli & Pelumas',   1, '2024-01-01T00:00:00.000Z'),
+  ('cat_002', 'Rem',             2, '2024-01-01T00:00:00.000Z'),
+  ('cat_003', 'Filter',          3, '2024-01-01T00:00:00.000Z'),
+  ('cat_004', 'Kelistrikan',     4, '2024-01-01T00:00:00.000Z'),
+  ('cat_005', 'Ban & Velg',      5, '2024-01-01T00:00:00.000Z'),
+  ('cat_006', 'Rantai & Gear',   6, '2024-01-01T00:00:00.000Z'),
+  ('cat_007', 'Jasa',            7, '2024-01-01T00:00:00.000Z'),
+  ('cat_008', 'Umum',            8, '2024-01-01T00:00:00.000Z');
+`;
+
 export const SEED_PRODUCTS_SQL = `
 INSERT OR IGNORE INTO products (local_id, name, sku, price, cost_price, stock, category, is_active, sync_status, created_at_local, updated_at_local, device_id, created_by, updated_by, is_deleted)
 VALUES

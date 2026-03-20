@@ -123,6 +123,13 @@ export interface SalarySlipMetadata extends SyncFields {
   whatsapp_number: string | null;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface CartItem {
   product: Product;
   quantity: number;

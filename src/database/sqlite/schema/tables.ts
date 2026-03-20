@@ -157,6 +157,13 @@ CREATE TABLE IF NOT EXISTS salary_slip_metadata (
   is_deleted INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS categories (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS sync_log (
   id TEXT PRIMARY KEY,
   entity_type TEXT NOT NULL,

@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, FlatList, StyleSheet, Pressable } from 'react-native';
+import { View, FlatList, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ShoppingCart, Search, Package } from 'lucide-react-native';
 import { AppScreen, AppText, AppInput, AppEmptyState } from '../../components/ui';
 import { productRepository } from '../../repositories/productRepository';
+import { categoryRepository } from '../../repositories/categoryRepository';
 import { useCartStore } from '../../stores/cartStore';
-import { Product } from '../../types';
+import { Product, Category } from '../../types';
 import { formatCurrency } from '../../utils/helpers';
 import { colors, spacing, radius, shadows } from '../../config/theme';
 
@@ -39,23 +40,28 @@ const ProductTile = React.memo(({ item, qty, onPress }: { item: Product; qty: nu
 export function CheckoutScreen() {
   const navigation = useNavigation<any>();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY);
   const { items, addItem, getItemCount, getTotal } = useCartStore();
   const itemCount = getItemCount();
   const total = getTotal();
 
-  const loadProducts = useCallback(async () => {
-    const data = await productRepository.getActive();
-    setAllProducts(data);
+  const loadData = useCallback(async () => {
+    const [products, cats] = await Promise.all([
+      productRepository.getActive(),
+      categoryRepository.getAll(),
+    ]);
+    setAllProducts(products);
+    setCategories(cats);
   }, []);
 
-  useFocusEffect(useCallback(() => { loadProducts(); }, [loadProducts]));
+  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
-  const categories = useMemo(() => {
-    const cats = new Set(allProducts.map((p) => p.category).filter(Boolean));
-    return [ALL_CATEGORY, ...Array.from(cats).sort()];
-  }, [allProducts]);
+  const categoryNames = useMemo(
+    () => [ALL_CATEGORY, ...categories.map((c) => c.name)],
+    [categories]
+  );
 
   const filteredProducts = useMemo(() => {
     let result = allProducts;
@@ -98,28 +104,21 @@ export function CheckoutScreen() {
           />
         </View>
 
-        {categories.length > 2 && (
-          <FlatList
-            data={categories}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item}
-            contentContainerStyle={styles.categoryBar}
-            renderItem={({ item: cat }) => (
+        <View style={styles.categorySection}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+            {categoryNames.map((cat) => (
               <Pressable
-                style={[styles.categoryChip, cat === selectedCategory && styles.categoryChipActive]}
+                key={cat}
+                style={[styles.chip, cat === selectedCategory && styles.chipActive]}
                 onPress={() => setSelectedCategory(cat)}
               >
-                <AppText
-                  variant="caption"
-                  style={[styles.categoryText, cat === selectedCategory && styles.categoryTextActive]}
-                >
+                <AppText style={[styles.chipText, cat === selectedCategory && styles.chipTextActive]}>
                   {cat}
                 </AppText>
               </Pressable>
-            )}
-          />
-        )}
+            ))}
+          </ScrollView>
+        </View>
 
         <FlatList
           data={filteredProducts}
@@ -178,28 +177,33 @@ const styles = StyleSheet.create({
   searchInput: {
     marginBottom: 0,
   },
-  categoryBar: {
+  categorySection: {
+    height: 44,
+    marginTop: spacing.sm,
+  },
+  categoryScroll: {
     paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
+    alignItems: 'center',
     gap: spacing.sm,
   },
-  categoryChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: radius.full,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  categoryChipActive: {
+  chipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  categoryText: {
-    color: colors.textSecondary,
+  chipText: {
+    fontSize: 13,
     fontWeight: '500',
+    color: colors.textSecondary,
   },
-  categoryTextActive: {
+  chipTextActive: {
     color: colors.textInverse,
     fontWeight: '600',
   },

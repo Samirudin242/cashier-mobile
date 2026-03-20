@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, Pressable, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { ChevronDown, Check } from 'lucide-react-native';
 import { AppScreen, AppCard, AppButton, AppInput, AppText } from '../../components/ui';
 import { productRepository } from '../../repositories/productRepository';
+import { categoryRepository } from '../../repositories/categoryRepository';
 import { useAuthStore } from '../../stores/authStore';
-import { Product } from '../../types';
-import { colors, spacing } from '../../config/theme';
+import { Category } from '../../types';
+import { colors, spacing, radius } from '../../config/theme';
 
 export function ProductFormScreen() {
   const navigation = useNavigation<any>();
@@ -15,6 +17,8 @@ export function ProductFormScreen() {
 
   const { user, deviceId } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [form, setForm] = useState({
     name: '',
     sku: '',
@@ -23,6 +27,10 @@ export function ProductFormScreen() {
     stock: '',
     category: '',
   });
+
+  useEffect(() => {
+    categoryRepository.getAll().then(setCategories);
+  }, []);
 
   useEffect(() => {
     if (isEdit) {
@@ -120,22 +128,63 @@ export function ProductFormScreen() {
             containerStyle={styles.halfInput}
           />
         </View>
-        <View style={styles.row}>
-          <AppInput
-            label="Stok"
-            placeholder="0"
-            value={form.stock}
-            onChangeText={(v) => setForm({ ...form, stock: v })}
-            keyboardType="numeric"
-            containerStyle={styles.halfInput}
-          />
-          <AppInput
-            label="Kategori"
-            placeholder="cth. Makanan"
-            value={form.category}
-            onChangeText={(v) => setForm({ ...form, category: v })}
-            containerStyle={styles.halfInput}
-          />
+
+        <AppInput
+          label="Stok"
+          placeholder="0"
+          value={form.stock}
+          onChangeText={(v) => setForm({ ...form, stock: v })}
+          keyboardType="numeric"
+        />
+
+        {/* Category Dropdown */}
+        <View style={styles.fieldGroup}>
+          <AppText variant="caption" style={styles.fieldLabel}>Kategori</AppText>
+          <Pressable
+            style={styles.dropdown}
+            onPress={() => setShowCategoryPicker(!showCategoryPicker)}
+          >
+            <AppText
+              variant="body"
+              style={form.category ? styles.dropdownText : styles.dropdownPlaceholder}
+            >
+              {form.category || 'Pilih kategori...'}
+            </AppText>
+            <ChevronDown size={18} color={colors.textMuted} />
+          </Pressable>
+
+          {showCategoryPicker && (
+            <View style={styles.pickerList}>
+              <ScrollView style={styles.pickerScroll} nestedScrollEnabled>
+                {categories.map((cat) => {
+                  const selected = form.category === cat.name;
+                  return (
+                    <Pressable
+                      key={cat.id}
+                      style={[styles.pickerItem, selected && styles.pickerItemSelected]}
+                      onPress={() => {
+                        setForm({ ...form, category: cat.name });
+                        setShowCategoryPicker(false);
+                      }}
+                    >
+                      <AppText
+                        variant="body"
+                        style={selected ? styles.pickerTextSelected : undefined}
+                      >
+                        {cat.name}
+                      </AppText>
+                      {selected && <Check size={16} color={colors.primary} />}
+                    </Pressable>
+                  );
+                })}
+                {categories.length === 0 && (
+                  <AppText variant="captionMuted" style={styles.pickerEmpty}>
+                    Belum ada kategori. Tambah di halaman produk.
+                  </AppText>
+                )}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </AppCard>
 
@@ -174,6 +223,62 @@ const styles = StyleSheet.create({
   },
   halfInput: {
     flex: 1,
+  },
+  fieldGroup: {
+    marginBottom: spacing.md,
+  },
+  fieldLabel: {
+    marginBottom: spacing.xs,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  dropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 46,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.background,
+  },
+  dropdownText: {
+    color: colors.text,
+  },
+  dropdownPlaceholder: {
+    color: colors.textMuted,
+  },
+  pickerList: {
+    marginTop: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    overflow: 'hidden',
+  },
+  pickerScroll: {
+    maxHeight: 200,
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  pickerItemSelected: {
+    backgroundColor: colors.primaryLight,
+  },
+  pickerTextSelected: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  pickerEmpty: {
+    padding: spacing.lg,
+    textAlign: 'center',
   },
   actions: {
     marginTop: spacing.xl,
