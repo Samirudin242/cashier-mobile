@@ -1,62 +1,89 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, FlatList, StyleSheet, Pressable } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ShoppingCart, Plus, Minus, Search, Package } from 'lucide-react-native';
-import { AppScreen, AppText, AppCard, AppInput, AppButton, AppEmptyState } from '../../components/ui';
+import { ShoppingCart, Search, Package } from 'lucide-react-native';
+import { AppScreen, AppText, AppInput, AppEmptyState } from '../../components/ui';
 import { productRepository } from '../../repositories/productRepository';
 import { useCartStore } from '../../stores/cartStore';
 import { Product } from '../../types';
 import { formatCurrency } from '../../utils/helpers';
 import { colors, spacing, radius, shadows } from '../../config/theme';
 
+const ALL_CATEGORY = 'Semua';
+
+const ProductTile = React.memo(({ item, qty, onPress }: { item: Product; qty: number; onPress: () => void }) => (
+  <Pressable
+    style={({ pressed }) => [styles.productCard, pressed && styles.productPressed]}
+    onPress={onPress}
+  >
+    <View style={styles.productIconWrap}>
+      <Package size={18} color={colors.primary} />
+    </View>
+    <View style={styles.productInfo}>
+      <AppText variant="bodyMedium" numberOfLines={1}>{item.name}</AppText>
+      <AppText variant="caption" style={{ color: colors.primary }}>
+        {formatCurrency(item.price)}
+      </AppText>
+    </View>
+    <View style={styles.productStock}>
+      <AppText variant="captionMuted">Stok: {item.stock}</AppText>
+    </View>
+    {qty > 0 && (
+      <View style={styles.qtyBadge}>
+        <AppText variant="caption" style={styles.qtyText}>{qty}</AppText>
+      </View>
+    )}
+  </Pressable>
+));
+
 export function CheckoutScreen() {
   const navigation = useNavigation<any>();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY);
   const { items, addItem, getItemCount, getTotal } = useCartStore();
   const itemCount = getItemCount();
   const total = getTotal();
 
   const loadProducts = useCallback(async () => {
-    const data = searchQuery
-      ? await productRepository.search(searchQuery)
-      : await productRepository.getActive();
-    setProducts(data);
-  }, [searchQuery]);
+    const data = await productRepository.getActive();
+    setAllProducts(data);
+  }, []);
 
   useFocusEffect(useCallback(() => { loadProducts(); }, [loadProducts]));
 
-  const getCartQuantity = (productId: string) => {
-    return items.find((i) => i.product.local_id === productId)?.quantity ?? 0;
-  };
+  const categories = useMemo(() => {
+    const cats = new Set(allProducts.map((p) => p.category).filter(Boolean));
+    return [ALL_CATEGORY, ...Array.from(cats).sort()];
+  }, [allProducts]);
 
-  const renderProduct = ({ item }: { item: Product }) => {
-    const qty = getCartQuantity(item.local_id);
-    return (
-      <Pressable
-        style={({ pressed }) => [styles.productCard, pressed && styles.productPressed]}
-        onPress={() => addItem(item)}
-      >
-        <View style={styles.productIconWrap}>
-          <Package size={18} color={colors.primary} />
-        </View>
-        <View style={styles.productInfo}>
-          <AppText variant="bodyMedium" numberOfLines={1}>{item.name}</AppText>
-          <AppText variant="caption" style={{ color: colors.primary }}>
-            {formatCurrency(item.price)}
-          </AppText>
-        </View>
-        <View style={styles.productStock}>
-          <AppText variant="captionMuted">Stok: {item.stock}</AppText>
-        </View>
-        {qty > 0 && (
-          <View style={styles.qtyBadge}>
-            <AppText variant="caption" style={styles.qtyText}>{qty}</AppText>
-          </View>
-        )}
-      </Pressable>
-    );
-  };
+  const filteredProducts = useMemo(() => {
+    let result = allProducts;
+    if (selectedCategory !== ALL_CATEGORY) {
+      result = result.filter((p) => p.category === selectedCategory);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (p) => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [allProducts, selectedCategory, searchQuery]);
+
+  const cartMap = useMemo(() => {
+    const m = new Map<string, number>();
+    items.forEach((i) => m.set(i.product.local_id, i.quantity));
+    return m;
+  }, [items]);
+
+  const renderProduct = useCallback(({ item }: { item: Product }) => (
+    <ProductTile
+      item={item}
+      qty={cartMap.get(item.local_id) ?? 0}
+      onPress={() => addItem(item)}
+    />
+  ), [cartMap, addItem]);
 
   return (
     <View style={styles.container}>
@@ -71,19 +98,48 @@ export function CheckoutScreen() {
           />
         </View>
 
+        {categories.length > 2 && (
+          <FlatList
+            data={categories}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item}
+            contentContainerStyle={styles.categoryBar}
+            renderItem={({ item: cat }) => (
+              <Pressable
+                style={[styles.categoryChip, cat === selectedCategory && styles.categoryChipActive]}
+                onPress={() => setSelectedCategory(cat)}
+              >
+                <AppText
+                  variant="caption"
+                  style={[styles.categoryText, cat === selectedCategory && styles.categoryTextActive]}
+                >
+                  {cat}
+                </AppText>
+              </Pressable>
+            )}
+          />
+        )}
+
         <FlatList
-          data={products}
+          data={filteredProducts}
           renderItem={renderProduct}
           keyExtractor={(item) => item.local_id}
           numColumns={2}
           columnWrapperStyle={styles.gridRow}
           contentContainerStyle={styles.gridContent}
           showsVerticalScrollIndicator={false}
+          initialNumToRender={16}
+          maxToRenderPerBatch={12}
+          windowSize={7}
+          removeClippedSubviews
           ListEmptyComponent={
             <AppEmptyState
               icon={<Package size={40} color={colors.textMuted} />}
               title="Belum Ada Produk"
-              message="Tambahkan produk terlebih dahulu"
+              message={searchQuery || selectedCategory !== ALL_CATEGORY
+                ? 'Tidak ada produk yang cocok dengan filter'
+                : 'Tambahkan produk terlebih dahulu'}
             />
           }
         />
@@ -120,7 +176,32 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
   },
   searchInput: {
-    marginBottom: spacing.sm,
+    marginBottom: 0,
+  },
+  categoryBar: {
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  categoryChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.full,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  categoryChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  categoryText: {
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  categoryTextActive: {
+    color: colors.textInverse,
+    fontWeight: '600',
   },
   gridContent: {
     paddingHorizontal: spacing.base,

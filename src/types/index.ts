@@ -28,6 +28,20 @@ export interface User {
   access_code: string;
   store_id: string;
   is_active: boolean;
+  daily_salary: number;
+}
+
+export interface EmployeeSalary {
+  employee: User;
+  daysWorked: number;
+  daysLate: number;
+  baseSalary: number;
+  bonus: number;
+  totalSalary: number;
+  periodStart: string;
+  periodEnd: string;
+  transactions: { date: string; itemsTotal: number; bonus: number }[];
+  attendanceDetails: { date: string; status: string; clockIn: string; clockOut: string | null }[];
 }
 
 export interface Product extends SyncFields {

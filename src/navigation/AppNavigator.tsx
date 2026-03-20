@@ -8,6 +8,7 @@ import {
   ArrowRightLeft,
   RefreshCw,
   User,
+  Users,
   BarChart3,
   Settings,
   ShoppingCart,
@@ -30,6 +31,9 @@ import { ReportsScreen } from "../screens/reports/ReportsScreen";
 import { AttendanceScreen } from "../screens/attendance/AttendanceScreen";
 import { SettingsScreen } from "../screens/settings/SettingsScreen";
 import { ProfileScreen } from "../screens/profile/ProfileScreen";
+import { EmployeeListScreen } from "../screens/employees/EmployeeListScreen";
+import { EmployeeFormScreen } from "../screens/employees/EmployeeFormScreen";
+import { EmployeeSalaryScreen } from "../screens/employees/EmployeeSalaryScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -98,6 +102,30 @@ function CheckoutStack() {
         name="TransactionSuccess"
         component={TransactionSuccessScreen}
         options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function EmployeesStack() {
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen
+        name="EmployeeList"
+        component={EmployeeListScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="EmployeeForm"
+        component={EmployeeFormScreen}
+        options={({ route }: any) => ({
+          title: route.params?.employeeId ? "Edit Karyawan" : "Tambah Karyawan",
+        })}
+      />
+      <Stack.Screen
+        name="EmployeeSalary"
+        component={EmployeeSalaryScreen}
+        options={{ title: "Detail Gaji" }}
       />
     </Stack.Navigator>
   );
@@ -232,6 +260,16 @@ function OwnerTabs() {
         }}
       />
       <Tab.Screen
+        name="EmployeesTab"
+        component={EmployeesStack}
+        options={{
+          tabBarLabel: "Karyawan",
+          tabBarIcon: ({ color, size }) => (
+            <Users size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="TransactionsTab"
         component={TransactionsStack}
         options={{
@@ -253,17 +291,6 @@ function OwnerTabs() {
         }}
       />
       <Tab.Screen
-        name="SyncTab"
-        component={SyncCenterScreen}
-        options={{
-          headerShown: false,
-          tabBarLabel: "Sinkron",
-          tabBarIcon: ({ color, size }) => (
-            <RefreshCw size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
         name="SettingsTab"
         component={SettingsScreen}
         options={{
@@ -278,12 +305,25 @@ function OwnerTabs() {
   );
 }
 
+function SyncStack() {
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen
+        name="SyncMain"
+        component={SyncCenterScreen}
+        options={{ headerShown: false }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function OwnerRoot() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="OwnerTabs" component={OwnerTabs} />
       <Stack.Screen name="CheckoutStack" component={CheckoutStack} />
       <Stack.Screen name="AttendanceStack" component={AttendanceStack} />
+      <Stack.Screen name="SyncStack" component={SyncStack} />
     </Stack.Navigator>
   );
 }

@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   access_code TEXT NOT NULL UNIQUE,
   store_id TEXT NOT NULL DEFAULT 'default_store',
   is_active INTEGER NOT NULL DEFAULT 1,
+  daily_salary REAL NOT NULL DEFAULT 0,
   logged_in_device_id TEXT,
   created_at TEXT NOT NULL
 );

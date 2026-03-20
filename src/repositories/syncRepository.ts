@@ -62,6 +62,16 @@ export const syncRepository = {
     };
   },
 
+  async deleteLog(id: string): Promise<void> {
+    const db = await getDatabase();
+    await db.runAsync('DELETE FROM sync_log WHERE id = ?', [id]);
+  },
+
+  async clearAllLogs(): Promise<void> {
+    const db = await getDatabase();
+    await db.runAsync('DELETE FROM sync_log');
+  },
+
   async clearOldLogs(daysOld = 30): Promise<void> {
     const db = await getDatabase();
     const cutoff = new Date();

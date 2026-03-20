@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Info,
   Shield,
+  RefreshCw,
 } from 'lucide-react-native';
 import { AppScreen, AppCard, AppText, AppListItem, AppSectionHeader, AppButton } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
@@ -96,6 +97,13 @@ export function SettingsScreen() {
 
       <AppSectionHeader title="Data" />
       <AppCard padded={false} style={styles.listCard}>
+        <AppListItem
+          title="Sinkronisasi"
+          subtitle="Unggah & unduh data cloud"
+          left={<RefreshCw size={18} color={colors.primary} />}
+          onPress={() => navigation.navigate('SyncStack')}
+          showChevron
+        />
         <AppListItem
           title="Database"
           subtitle="Penyimpanan lokal SQLite"

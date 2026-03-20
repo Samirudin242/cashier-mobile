@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, Pressable } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   Upload,
@@ -9,6 +9,7 @@ import {
   CheckCircle,
   CloudOff,
   RefreshCw,
+  Trash2,
 } from 'lucide-react-native';
 import { AppScreen, AppCard, AppText, AppButton, AppBadge, AppSectionHeader } from '../../components/ui';
 import { syncRepository } from '../../repositories/syncRepository';
@@ -86,6 +87,42 @@ export function SyncCenterScreen() {
     }
   };
 
+  const handleDeleteLog = (log: SyncLogEntry) => {
+    Alert.alert(
+      'Hapus Aktivitas',
+      'Apakah Anda yakin ingin menghapus log ini?',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: async () => {
+            await syncRepository.deleteLog(log.id);
+            await loadData();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClearAllLogs = () => {
+    Alert.alert(
+      'Hapus Semua Aktivitas',
+      'Semua riwayat aktivitas sinkronisasi akan dihapus. Tindakan ini tidak dapat dibatalkan.',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus Semua',
+          style: 'destructive',
+          onPress: async () => {
+            await syncRepository.clearAllLogs();
+            await loadData();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <AppScreen scroll>
       <AppText variant="title" style={styles.pageTitle}>Pusat Sinkronisasi</AppText>
@@ -146,7 +183,11 @@ export function SyncCenterScreen() {
 
       {logs.length > 0 && (
         <>
-          <AppSectionHeader title="Aktivitas Terbaru" />
+          <AppSectionHeader
+            title="Aktivitas Terbaru"
+            actionLabel="Hapus Semua"
+            onAction={handleClearAllLogs}
+          />
           {logs.map((log) => (
             <AppCard key={log.id} style={styles.logCard}>
               <View style={styles.logRow}>
@@ -160,7 +201,11 @@ export function SyncCenterScreen() {
                 <AppBadge
                   label={log.status === 'success' ? 'Berhasil' : 'Gagal'}
                   variant={log.status === 'success' ? 'success' : 'error'}
+                  style={styles.logBadge}
                 />
+                <Pressable onPress={() => handleDeleteLog(log)} hitSlop={8} style={styles.logDeleteBtn}>
+                  <Trash2 size={14} color={colors.textMuted} />
+                </Pressable>
               </View>
               {log.error_message && (
                 <AppText variant="captionMuted" style={styles.logError} numberOfLines={2}>
@@ -267,6 +312,12 @@ const styles = StyleSheet.create({
   },
   logInfo: {
     flex: 1,
+  },
+  logBadge: {
+    marginRight: spacing.sm,
+  },
+  logDeleteBtn: {
+    padding: spacing.xs,
   },
   logError: {
     marginTop: spacing.xs,
