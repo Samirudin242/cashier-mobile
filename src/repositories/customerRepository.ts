@@ -102,13 +102,20 @@ export const customerRepository = {
 
   async upsertFromCloud(data: any, deviceId: string): Promise<void> {
     const db = await getDatabase();
-    const existing = await db.getFirstAsync<any>('SELECT * FROM customers WHERE cloud_id = ?', [data.id]);
     const now = nowISO();
+
+    let existing = await db.getFirstAsync<any>('SELECT * FROM customers WHERE cloud_id = ?', [data.id]);
+    if (!existing && data.whatsapp) {
+      existing = await db.getFirstAsync<any>(
+        'SELECT * FROM customers WHERE whatsapp = ? AND cloud_id IS NULL',
+        [data.whatsapp]
+      );
+    }
 
     if (existing) {
       await db.runAsync(
-        `UPDATE customers SET name = ?, whatsapp = ?, email = ?, address = ?, total_transactions = ?, total_spent = ?, sync_status = 'synced', last_synced_at = ?, updated_at_local = ? WHERE cloud_id = ?`,
-        [data.name, data.whatsapp, data.email, data.address, data.total_transactions ?? 0, data.total_spent ?? 0, now, now, data.id]
+        `UPDATE customers SET cloud_id = ?, name = ?, whatsapp = ?, email = ?, address = ?, total_transactions = ?, total_spent = ?, sync_status = 'synced', last_synced_at = ?, updated_at_local = ? WHERE local_id = ?`,
+        [data.id, data.name, data.whatsapp, data.email, data.address, data.total_transactions ?? 0, data.total_spent ?? 0, now, now, existing.local_id]
       );
     } else {
       await db.runAsync(

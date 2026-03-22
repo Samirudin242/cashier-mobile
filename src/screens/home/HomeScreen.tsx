@@ -1,6 +1,6 @@
-import React, { useCallback, useState, useEffect } from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useCallback, useState, useEffect } from "react";
+import { View, StyleSheet, Pressable } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import {
   ShoppingCart,
   Package,
@@ -8,19 +8,30 @@ import {
   TrendingUp,
   Clock,
   DollarSign,
-} from 'lucide-react-native';
-import { AppScreen, AppText, AppCard, AppStatCard, AppSectionHeader } from '../../components/ui';
-import { useAuthStore } from '../../stores/authStore';
-import { transactionRepository } from '../../repositories/transactionRepository';
-import { productRepository } from '../../repositories/productRepository';
-import { syncRepository } from '../../repositories/syncRepository';
-import { colors, spacing, radius, shadows } from '../../config/theme';
-import { formatCurrency } from '../../utils/helpers';
+} from "lucide-react-native";
+import {
+  AppScreen,
+  AppText,
+  AppCard,
+  AppStatCard,
+  AppSectionHeader,
+} from "../../components/ui";
+import { useAuthStore } from "../../stores/authStore";
+import { transactionRepository } from "../../repositories/transactionRepository";
+import { productRepository } from "../../repositories/productRepository";
+import { syncRepository } from "../../repositories/syncRepository";
+import { colors, spacing, radius, shadows } from "../../config/theme";
+import { formatCurrency } from "../../utils/helpers";
 
 export function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const navigation = useNavigation<any>();
-  const [stats, setStats] = useState({ todayTotal: 0, todayCount: 0, productCount: 0, pendingSync: 0 });
+  const [stats, setStats] = useState({
+    todayTotal: 0,
+    todayCount: 0,
+    productCount: 0,
+    pendingSync: 0,
+  });
 
   const loadStats = useCallback(async () => {
     const [todayData, productCount, syncSummary] = await Promise.all([
@@ -41,15 +52,15 @@ export function HomeScreen() {
   }, [loadStats]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', loadStats);
+    const unsubscribe = navigation.addListener("focus", loadStats);
     return unsubscribe;
   }, [navigation, loadStats]);
 
   const greeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Selamat Pagi';
-    if (hour < 17) return 'Selamat Siang';
-    return 'Selamat Malam';
+    if (hour < 12) return "Selamat Pagi";
+    if (hour < 17) return "Selamat Siang";
+    return "Selamat Malam";
   };
 
   return (
@@ -57,11 +68,13 @@ export function HomeScreen() {
       <View style={styles.headerSection}>
         <View>
           <AppText variant="caption">{greeting()}</AppText>
-          <AppText variant="title" style={styles.userName}>{user?.name ?? 'Pengguna'}</AppText>
+          <AppText variant="title" style={styles.userName}>
+            {user?.name ?? "Pengguna"}
+          </AppText>
         </View>
         <View style={styles.roleTag}>
           <AppText variant="captionMuted" style={styles.roleText}>
-            {user?.role === 'owner' ? 'Pemilik' : 'Karyawan'}
+            {user?.role === "owner" ? "Pemilik" : "Karyawan"}
           </AppText>
         </View>
       </View>
@@ -85,7 +98,13 @@ export function HomeScreen() {
       </View>
 
       {stats.pendingSync > 0 && (
-        <Pressable onPress={() => navigation.navigate(user?.role === 'owner' ? 'SyncStack' : 'SyncTab')}>
+        <Pressable
+          onPress={() =>
+            navigation.navigate(
+              user?.role === "owner" ? "SyncStack" : "SyncTab"
+            )
+          }
+        >
           <AppCard style={styles.syncBanner}>
             <View style={styles.syncBannerContent}>
               <ArrowRightLeft size={18} color={colors.warning} />
@@ -93,7 +112,9 @@ export function HomeScreen() {
                 <AppText variant="bodyMedium" style={{ color: colors.warning }}>
                   {stats.pendingSync} menunggu sinkronisasi
                 </AppText>
-                <AppText variant="captionMuted">Ketuk untuk sinkronkan data</AppText>
+                <AppText variant="captionMuted">
+                  Ketuk untuk sinkronkan data
+                </AppText>
               </View>
             </View>
           </AppCard>
@@ -105,42 +126,58 @@ export function HomeScreen() {
         <QuickAction
           icon={<ShoppingCart size={22} color={colors.primary} />}
           label="Penjualan Baru"
-          onPress={() => navigation.navigate('CheckoutStack')}
+          onPress={() => navigation.navigate("CheckoutStack")}
         />
         <QuickAction
           icon={<Package size={22} color={colors.success} />}
           label="Produk"
-          onPress={() => navigation.navigate('ProductsTab')}
+          onPress={() => navigation.navigate("ProductsTab")}
         />
         <QuickAction
           icon={<ArrowRightLeft size={22} color={colors.warning} />}
           label="Transaksi"
-          onPress={() => navigation.navigate('TransactionsTab')}
+          onPress={() => navigation.navigate("TransactionsTab")}
         />
         <QuickAction
           icon={<Clock size={22} color={colors.error} />}
           label="Absensi"
-          onPress={() => navigation.navigate('AttendanceStack')}
+          onPress={() => navigation.navigate("AttendanceStack")}
         />
       </View>
     </AppScreen>
   );
 }
 
-function QuickAction({ icon, label, onPress }: { icon: React.ReactNode; label: string; onPress: () => void }) {
+function QuickAction({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onPress: () => void;
+}) {
   return (
-    <Pressable style={({ pressed }) => [styles.actionCard, pressed && styles.actionPressed]} onPress={onPress}>
+    <Pressable
+      style={({ pressed }) => [
+        styles.actionCard,
+        pressed && styles.actionPressed,
+      ]}
+      onPress={onPress}
+    >
       <View style={styles.actionIcon}>{icon}</View>
-      <AppText variant="caption" style={styles.actionLabel}>{label}</AppText>
+      <AppText variant="caption" style={styles.actionLabel}>
+        {label}
+      </AppText>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   headerSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing.md,
@@ -156,11 +193,11 @@ const styles = StyleSheet.create({
   },
   roleText: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: "600",
     fontSize: 12,
   },
   statsRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: spacing.base,
     marginTop: spacing.sm,
   },
@@ -169,27 +206,27 @@ const styles = StyleSheet.create({
     marginTop: spacing.base,
     backgroundColor: colors.warningLight,
     borderWidth: 1,
-    borderColor: colors.warning + '30',
+    borderColor: colors.warning + "30",
   },
   syncBannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   syncBannerText: {
     marginLeft: spacing.md,
   },
   actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     paddingHorizontal: spacing.base,
     gap: spacing.md,
   },
   actionCard: {
-    width: '47%',
+    width: "47%",
     backgroundColor: colors.card,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    alignItems: 'center',
+    alignItems: "center",
     ...shadows.sm,
   },
   actionPressed: {
@@ -201,11 +238,11 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: radius.lg,
     backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: spacing.sm,
   },
   actionLabel: {
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

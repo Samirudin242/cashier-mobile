@@ -3,6 +3,7 @@ import { productRepository } from '../../repositories/productRepository';
 import { transactionRepository } from '../../repositories/transactionRepository';
 import { customerRepository } from '../../repositories/customerRepository';
 import { attendanceRepository } from '../../repositories/attendanceRepository';
+import { categoryRepository } from '../../repositories/categoryRepository';
 import { syncRepository } from '../../repositories/syncRepository';
 
 interface DownloadResult {
@@ -14,12 +15,46 @@ interface DownloadResult {
 export async function downloadSync(deviceId: string): Promise<DownloadResult> {
   const result: DownloadResult = { downloaded: 0, failed: 0, errors: [] };
 
+  await downloadCategories(result);
   await downloadProducts(deviceId, result);
   await downloadTransactions(deviceId, result);
+  await downloadTransactionItems(deviceId, result);
   await downloadCustomers(deviceId, result);
   await downloadAttendance(deviceId, result);
 
   return result;
+}
+
+async function downloadCategories(result: DownloadResult) {
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (error) throw error;
+
+    for (const item of data ?? []) {
+      try {
+        await categoryRepository.upsertFromCloud(item);
+        result.downloaded++;
+      } catch (err: any) {
+        result.failed++;
+        result.errors.push(`Kategori ${item.name}: ${err.message}`);
+      }
+    }
+
+    await syncRepository.logEntry({
+      entity_type: 'categories',
+      entity_local_id: 'batch',
+      action: 'download',
+      status: 'success',
+      error_message: null,
+    });
+  } catch (err: any) {
+    result.failed++;
+    result.errors.push(`Unduh kategori: ${err.message}`);
+  }
 }
 
 async function downloadProducts(deviceId: string, result: DownloadResult) {
@@ -84,6 +119,55 @@ async function downloadTransactions(deviceId: string, result: DownloadResult) {
   } catch (err: any) {
     result.failed++;
     result.errors.push(`Unduh transaksi: ${err.message}`);
+  }
+}
+
+async function downloadTransactionItems(_deviceId: string, result: DownloadResult) {
+  try {
+    const { data: items, error } = await supabase
+      .from('transaction_items')
+      .select('*')
+      .order('transaction_id', { ascending: true });
+
+    if (error) throw error;
+
+    const byTransaction = new Map<string, typeof items>();
+    for (const item of items ?? []) {
+      const tid = item.transaction_id;
+      if (!byTransaction.has(tid)) byTransaction.set(tid, []);
+      byTransaction.get(tid)!.push(item);
+    }
+
+    for (const [cloudTransactionId, cloudItems] of byTransaction) {
+      try {
+        const localId = await transactionRepository.getLocalIdByCloudId(cloudTransactionId);
+        if (!localId) continue;
+
+        const formatted = cloudItems.map((i: any) => ({
+          product_name: i.product_name,
+          product_price: i.product_price,
+          handling_fee: i.handling_fee ?? 0,
+          quantity: i.quantity,
+          subtotal: i.subtotal,
+        }));
+        await transactionRepository.replaceItemsFromCloud(localId, formatted);
+        result.downloaded += cloudItems.length;
+      } catch (err: any) {
+        result.failed++;
+        result.errors.push(`Item transaksi: ${err.message}`);
+      }
+    }
+
+    await syncRepository.logEntry({
+      entity_type: 'transaction_items',
+      entity_local_id: 'batch',
+      action: 'download',
+      status: 'success',
+      error_message: null,
+    });
+  } catch (err: any) {
+    result.failed++;
+    result.errors.push(`Unduh item transaksi: ${err.message}`);
   }
 }
 

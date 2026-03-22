@@ -244,7 +244,9 @@ export function EmployeeSalaryScreen() {
           <AppCard key={i} style={styles.detailCard}>
             <View style={styles.detailRow}>
               <View style={styles.detailInfo}>
-                <AppText variant="bodyMedium">{t.date.split('T')[0]}</AppText>
+                <AppText variant="bodyMedium">
+                  {t.transactionNumber ? `${t.transactionNumber} · ` : ''}{t.date.split('T')[0]}
+                </AppText>
                 <AppText variant="captionMuted">
                   Item: {formatCurrency(t.itemsTotal)} − Penanganan: {formatCurrency(t.handlingTotal)} = {formatCurrency(t.net)}
                 </AppText>

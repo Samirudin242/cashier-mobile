@@ -137,6 +137,29 @@ CREATE TABLE IF NOT EXISTS attendance (
 );
 
 -- ========================
+-- CATEGORIES
+-- ========================
+CREATE TABLE IF NOT EXISTS categories (
+  id text PRIMARY KEY,
+  name text NOT NULL UNIQUE,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Seed categories (same as local SQLite seed)
+INSERT INTO categories (id, name, sort_order, created_at)
+VALUES
+  ('cat_001', 'Oli & Pelumas',   1, '2024-01-01T00:00:00.000Z'),
+  ('cat_002', 'Rem',             2, '2024-01-01T00:00:00.000Z'),
+  ('cat_003', 'Filter',          3, '2024-01-01T00:00:00.000Z'),
+  ('cat_004', 'Kelistrikan',     4, '2024-01-01T00:00:00.000Z'),
+  ('cat_005', 'Ban & Velg',      5, '2024-01-01T00:00:00.000Z'),
+  ('cat_006', 'Rantai & Gear',   6, '2024-01-01T00:00:00.000Z'),
+  ('cat_007', 'Jasa',            7, '2024-01-01T00:00:00.000Z'),
+  ('cat_008', 'Umum',            8, '2024-01-01T00:00:00.000Z')
+ON CONFLICT (id) DO NOTHING;
+
+-- ========================
 -- INDEXES
 -- ========================
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);

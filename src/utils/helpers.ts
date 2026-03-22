@@ -48,3 +48,30 @@ export function nowISO(): string {
 export function todayDateString(): string {
   return new Date().toISOString().split('T')[0];
 }
+
+/**
+ * Normalizes Indonesian phone input to WhatsApp international format (62xxxxxxxxxxx).
+ * Accepts e.g. 082347497133, +62 823-4749-7133, 6282347497133
+ */
+export function normalizeIndonesianPhoneForWhatsApp(input: string): string | null {
+  const digits = input.replace(/\D/g, '');
+  if (!digits) return null;
+
+  let n = digits;
+  if (n.startsWith('62')) {
+    // already 62...
+  } else if (n.startsWith('0')) {
+    n = '62' + n.slice(1);
+  } else if (n.startsWith('8') && n.length >= 9 && n.length <= 12) {
+    // 8xx... without leading 0
+    n = '62' + n;
+  } else {
+    return null;
+  }
+
+  // Indonesian mobile after 62: typically 9–12 digits (62 + 8–11 digit national number)
+  if (n.length < 11 || n.length > 15) return null;
+  if (!n.startsWith('62')) return null;
+
+  return n;
+}

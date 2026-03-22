@@ -102,13 +102,20 @@ export const attendanceRepository = {
 
   async upsertFromCloud(data: any, deviceId: string): Promise<void> {
     const db = await getDatabase();
-    const existing = await db.getFirstAsync<any>('SELECT * FROM attendance WHERE cloud_id = ?', [data.id]);
     const now = nowISO();
+
+    let existing = await db.getFirstAsync<any>('SELECT * FROM attendance WHERE cloud_id = ?', [data.id]);
+    if (!existing) {
+      existing = await db.getFirstAsync<any>(
+        'SELECT * FROM attendance WHERE employee_id = ? AND date = ? AND cloud_id IS NULL',
+        [data.employee_id, data.date]
+      );
+    }
 
     if (existing) {
       await db.runAsync(
-        `UPDATE attendance SET employee_name = ?, clock_in = ?, clock_out = ?, date = ?, notes = ?, status = ?, sync_status = 'synced', last_synced_at = ?, updated_at_local = ? WHERE cloud_id = ?`,
-        [data.employee_name, data.clock_in, data.clock_out, data.date, data.notes, data.status, now, now, data.id]
+        `UPDATE attendance SET cloud_id = ?, employee_name = ?, clock_in = ?, clock_out = ?, date = ?, notes = ?, status = ?, sync_status = 'synced', last_synced_at = ?, updated_at_local = ? WHERE local_id = ?`,
+        [data.id, data.employee_name, data.clock_in, data.clock_out, data.date, data.notes, data.status, now, now, existing.local_id]
       );
     } else {
       await db.runAsync(

@@ -34,4 +34,20 @@ export const categoryRepository = {
     );
     return !!row;
   },
+
+  async upsertFromCloud(data: { id: string; name: string; sort_order: number; created_at: string }): Promise<void> {
+    const db = await getDatabase();
+    const existing = await db.getFirstAsync<any>('SELECT id FROM categories WHERE id = ?', [data.id]);
+    if (existing) {
+      await db.runAsync(
+        'UPDATE categories SET name = ?, sort_order = ? WHERE id = ?',
+        [data.name, data.sort_order, data.id]
+      );
+    } else {
+      await db.runAsync(
+        'INSERT INTO categories (id, name, sort_order, created_at) VALUES (?, ?, ?, ?)',
+        [data.id, data.name, data.sort_order, data.created_at || nowISO()]
+      );
+    }
+  },
 };

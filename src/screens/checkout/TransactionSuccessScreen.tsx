@@ -1,20 +1,38 @@
-import React from 'react';
-import { View, StyleSheet, Linking } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, Linking, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { CheckCircle, Printer, MessageCircle, Home } from 'lucide-react-native';
-import { AppScreen, AppText, AppButton, AppCard } from '../../components/ui';
-import { formatCurrency } from '../../utils/helpers';
+import { AppScreen, AppText, AppButton, AppCard, AppInput } from '../../components/ui';
+import { formatCurrency, normalizeIndonesianPhoneForWhatsApp } from '../../utils/helpers';
 import { colors, spacing, radius } from '../../config/theme';
 
 export function TransactionSuccessScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { total, transactionNumber } = route.params;
+  const { total, transactionNumber, customerWhatsapp: initialWhatsapp } = route.params;
 
-  const handleWhatsApp = () => {
+  const [whatsapp, setWhatsapp] = useState(
+    typeof initialWhatsapp === 'string' ? initialWhatsapp : ''
+  );
+
+  const handleWhatsApp = async () => {
     const message = `Struk: ${transactionNumber}\nTotal: ${formatCurrency(total)}\n\nTerima kasih atas pembelian Anda!`;
-    const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
-    Linking.openURL(url).catch(() => {});
+    const phone = normalizeIndonesianPhoneForWhatsApp(whatsapp.trim());
+
+    if (!phone) {
+      Alert.alert(
+        'Nomor tidak valid',
+        'Masukkan nomor WhatsApp Indonesia, contoh: 082347497133 atau 6282347497133'
+      );
+      return;
+    }
+
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Kesalahan', 'Tidak dapat membuka WhatsApp. Pastikan aplikasi WhatsApp terpasang.');
+    }
   };
 
   const handleHome = () => {
@@ -36,6 +54,20 @@ export function TransactionSuccessScreen() {
           <AppText variant="numberLarge" style={styles.totalValue}>
             {formatCurrency(total)}
           </AppText>
+        </AppCard>
+
+        <AppCard style={styles.waCard}>
+          <AppText variant="sectionTitle" style={styles.waTitle}>Kirim struk ke WhatsApp</AppText>
+          <AppText variant="captionMuted" style={styles.waHint}>
+            Nomor pelanggan (Indonesia), contoh: 082347497133
+          </AppText>
+          <AppInput
+            label="Nomor WhatsApp"
+            placeholder="082347497133"
+            value={whatsapp}
+            onChangeText={setWhatsapp}
+            keyboardType="phone-pad"
+          />
         </AppCard>
 
         <View style={styles.actions}>
@@ -96,13 +128,24 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     alignItems: 'center',
     width: '100%',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.base,
   },
   totalLabel: {
     marginBottom: spacing.sm,
   },
   totalValue: {
     color: colors.primary,
+  },
+  waCard: {
+    width: '100%',
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  waTitle: {
+    marginBottom: spacing.xs,
+  },
+  waHint: {
+    marginBottom: spacing.md,
   },
   actions: {
     width: '100%',

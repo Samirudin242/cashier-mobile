@@ -55,11 +55,13 @@ export function CartReviewScreen() {
         notes: notes || undefined,
         device_id: deviceId,
       });
+      const savedWhatsapp = customerWhatsapp.trim();
       clear();
       navigation.replace('TransactionSuccess', {
         transactionId: txn.local_id,
         total: txn.total,
         transactionNumber: txn.transaction_number,
+        customerWhatsapp: savedWhatsapp,
       });
     } catch (err: any) {
       Alert.alert('Kesalahan', err.message);

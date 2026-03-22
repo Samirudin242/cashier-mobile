@@ -130,22 +130,30 @@ export const productRepository = {
 
   async upsertFromCloud(data: any, deviceId: string): Promise<void> {
     const db = await getDatabase();
-    const existing = await db.getFirstAsync<any>(
+    const now = nowISO();
+
+    // Match by cloud_id first, then fallback to sku (for seed data without cloud_id)
+    let existing = await db.getFirstAsync<any>(
       'SELECT * FROM products WHERE cloud_id = ?',
       [data.id]
     );
+    if (!existing) {
+      existing = await db.getFirstAsync<any>(
+        'SELECT * FROM products WHERE sku = ? AND cloud_id IS NULL',
+        [data.sku]
+      );
+    }
 
-    const now = nowISO();
     if (existing) {
       await db.runAsync(
-        `UPDATE products SET name = ?, sku = ?, price = ?, cost_price = ?, stock = ?, category = ?, is_active = ?, is_deleted = ?, sync_status = 'synced', last_synced_at = ?, updated_at_local = ? WHERE cloud_id = ?`,
-        [data.name, data.sku, data.price, data.cost_price, data.stock, data.category, data.is_active ? 1 : 0, data.is_deleted ? 1 : 0, now, now, data.id]
+        `UPDATE products SET cloud_id = ?, name = ?, sku = ?, price = ?, cost_price = ?, handling_fee = ?, stock = ?, category = ?, is_active = ?, is_deleted = ?, sync_status = 'synced', last_synced_at = ?, updated_at_local = ? WHERE local_id = ?`,
+        [data.id, data.name, data.sku, data.price, data.cost_price, data.handling_fee ?? 0, data.stock, data.category, data.is_active ? 1 : 0, data.is_deleted ? 1 : 0, now, now, existing.local_id]
       );
     } else {
       await db.runAsync(
-        `INSERT INTO products (local_id, cloud_id, name, sku, price, cost_price, stock, category, is_active, sync_status, created_at_local, updated_at_local, last_synced_at, device_id, created_by, updated_by, is_deleted)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced', ?, ?, ?, ?, ?, ?, ?)`,
-        [generateLocalId(), data.id, data.name, data.sku, data.price, data.cost_price, data.stock, data.category, data.is_active ? 1 : 0, data.created_at || now, now, now, deviceId, data.created_by || '', data.updated_by || '', data.is_deleted ? 1 : 0]
+        `INSERT INTO products (local_id, cloud_id, name, sku, price, cost_price, handling_fee, stock, category, is_active, sync_status, created_at_local, updated_at_local, last_synced_at, device_id, created_by, updated_by, is_deleted)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced', ?, ?, ?, ?, ?, ?, ?)`,
+        [generateLocalId(), data.id, data.name, data.sku, data.price, data.cost_price, data.handling_fee ?? 0, data.stock, data.category, data.is_active ? 1 : 0, data.created_at || now, now, now, deviceId, data.created_by || '', data.updated_by || '', data.is_deleted ? 1 : 0]
       );
     }
   },

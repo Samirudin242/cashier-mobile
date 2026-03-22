@@ -73,7 +73,7 @@ export const userRepository = {
   async getEmployeeTransactionBonus(employeeId: string, startDate: string, endDate: string, bonusPercent: number) {
     const db = await getDatabase();
     const rows = await db.getAllAsync<any>(
-      `SELECT t.transaction_date,
+      `SELECT t.local_id, t.transaction_number, t.transaction_date,
               SUM(ti.subtotal) as items_total,
               SUM(ti.handling_fee * ti.quantity) as handling_total
        FROM transactions t
@@ -89,6 +89,7 @@ export const userRepository = {
       const handlingTotal = (r.handling_total as number) ?? 0;
       const net = Math.max(0, itemsTotal - handlingTotal);
       return {
+        transactionNumber: r.transaction_number,
         date: r.transaction_date,
         itemsTotal,
         handlingTotal,

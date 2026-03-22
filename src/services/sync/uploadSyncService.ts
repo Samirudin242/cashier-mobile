@@ -3,6 +3,7 @@ import { productRepository } from '../../repositories/productRepository';
 import { transactionRepository } from '../../repositories/transactionRepository';
 import { customerRepository } from '../../repositories/customerRepository';
 import { attendanceRepository } from '../../repositories/attendanceRepository';
+import { categoryRepository } from '../../repositories/categoryRepository';
 import { syncRepository } from '../../repositories/syncRepository';
 
 interface SyncResult {
@@ -14,12 +15,66 @@ interface SyncResult {
 export async function uploadSync(): Promise<SyncResult> {
   const result: SyncResult = { uploaded: 0, failed: 0, errors: [] };
 
+  await uploadCategories(result);
   await uploadProducts(result);
   await uploadTransactions(result);
   await uploadCustomers(result);
   await uploadAttendance(result);
 
   return result;
+}
+
+async function uploadCategories(result: SyncResult) {
+  try {
+    const categories = await categoryRepository.getAll();
+    for (const cat of categories) {
+      // Supabase has UNIQUE on `name`. Upsert on `id` alone fails when the same name
+      // already exists with another id (e.g. seed on cloud vs local). Match by name first.
+      const { data: byName, error: selErr } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('name', cat.name)
+        .maybeSingle();
+      if (selErr) throw selErr;
+
+      if (byName) {
+        const { error } = await supabase
+          .from('categories')
+          .update({ sort_order: cat.sort_order })
+          .eq('id', byName.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('categories')
+          .insert({
+            id: cat.id,
+            name: cat.name,
+            sort_order: cat.sort_order,
+            created_at: cat.created_at,
+          });
+        if (error) throw error;
+      }
+      result.uploaded++;
+    }
+    await syncRepository.logEntry({
+      entity_type: 'categories',
+      entity_local_id: 'batch',
+      action: 'upload',
+      status: 'success',
+      error_message: null,
+    });
+  } catch (err: any) {
+    const msg = err?.message || 'Kesalahan tidak diketahui';
+    result.failed++;
+    result.errors.push(`Kategori: ${msg}`);
+    await syncRepository.logEntry({
+      entity_type: 'categories',
+      entity_local_id: 'batch',
+      action: 'upload',
+      status: 'failed',
+      error_message: msg,
+    });
+  }
 }
 
 async function uploadProducts(result: SyncResult) {
@@ -84,6 +139,8 @@ async function uploadTransactions(result: SyncResult) {
   const pending = await transactionRepository.getPendingSync();
 
   for (const txn of pending) {
+    if (txn.sync_status === 'pending_delete') continue;
+
     try {
       const payload = {
         transaction_number: txn.transaction_number,
@@ -114,10 +171,12 @@ async function uploadTransactions(result: SyncResult) {
       } else {
         const { data, error } = await supabase.from('transactions').insert(payload).select().single();
         if (error) throw error;
-        cloudId = data.id;
+        cloudId = data?.id ?? null;
       }
 
-      await transactionRepository.markSynced(txn.local_id, cloudId!);
+      if (!cloudId) throw new Error('Failed to get transaction cloud ID');
+      await uploadTransactionItems(txn.local_id, cloudId);
+      await transactionRepository.markSynced(txn.local_id, cloudId);
       await syncRepository.logEntry({
         entity_type: 'transactions',
         entity_local_id: txn.local_id,
@@ -139,6 +198,28 @@ async function uploadTransactions(result: SyncResult) {
       result.failed++;
       result.errors.push(`Transaksi ${txn.transaction_number}: ${msg}`);
     }
+  }
+}
+
+async function uploadTransactionItems(transactionLocalId: string, cloudTransactionId: string) {
+  const items = await transactionRepository.getItems(transactionLocalId);
+
+  await supabase
+    .from('transaction_items')
+    .delete()
+    .eq('transaction_id', cloudTransactionId);
+
+  if (items.length > 0) {
+    const payloads = items.map((item) => ({
+      transaction_id: cloudTransactionId,
+      product_name: item.product_name,
+      product_price: item.product_price,
+      handling_fee: item.handling_fee ?? 0,
+      quantity: item.quantity,
+      subtotal: item.subtotal,
+    }));
+    const { error } = await supabase.from('transaction_items').insert(payloads);
+    if (error) throw error;
   }
 }
 

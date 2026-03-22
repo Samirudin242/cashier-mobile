@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, Pressable, ScrollView } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { ChevronDown, Check } from 'lucide-react-native';
-import { AppScreen, AppCard, AppButton, AppInput, AppText } from '../../components/ui';
-import { productRepository } from '../../repositories/productRepository';
-import { categoryRepository } from '../../repositories/categoryRepository';
-import { useAuthStore } from '../../stores/authStore';
-import { Category } from '../../types';
-import { colors, spacing, radius } from '../../config/theme';
+import React, { useState, useEffect } from "react";
+import { View, StyleSheet, Alert, Pressable, ScrollView } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { ChevronDown, Check } from "lucide-react-native";
+import {
+  AppScreen,
+  AppCard,
+  AppButton,
+  AppInput,
+  AppText,
+} from "../../components/ui";
+import { productRepository } from "../../repositories/productRepository";
+import { categoryRepository } from "../../repositories/categoryRepository";
+import { useAuthStore } from "../../stores/authStore";
+import { Category } from "../../types";
+import { colors, spacing, radius } from "../../config/theme";
 
 export function ProductFormScreen() {
   const navigation = useNavigation<any>();
@@ -20,13 +26,13 @@ export function ProductFormScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [form, setForm] = useState({
-    name: '',
-    sku: '',
-    price: '',
-    cost_price: '',
-    handling_fee: '',
-    stock: '',
-    category: '',
+    name: "",
+    sku: "",
+    price: "",
+    cost_price: "",
+    handling_fee: "",
+    stock: "",
+    category: "",
   });
 
   useEffect(() => {
@@ -53,7 +59,7 @@ export function ProductFormScreen() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.price) {
-      Alert.alert('Validasi', 'Nama dan harga wajib diisi');
+      Alert.alert("Validasi", "Nama dan harga wajib diisi");
       return;
     }
 
@@ -81,14 +87,14 @@ export function ProductFormScreen() {
           cost_price: parseFloat(form.cost_price) || 0,
           handling_fee: parseFloat(form.handling_fee) || 0,
           stock: parseInt(form.stock) || 0,
-          category: form.category.trim() || 'Umum',
+          category: form.category.trim() || "Umum",
           device_id: deviceId,
           user_id: user!.id,
         });
       }
       navigation.goBack();
     } catch (err: any) {
-      Alert.alert('Kesalahan', err.message);
+      Alert.alert("Kesalahan", err.message);
     } finally {
       setLoading(false);
     }
@@ -97,19 +103,19 @@ export function ProductFormScreen() {
   return (
     <AppScreen scroll>
       <AppText variant="title" style={styles.title}>
-        {isEdit ? 'Edit Produk' : 'Produk Baru'}
+        {isEdit ? "Edit Produk" : "Produk Baru"}
       </AppText>
 
       <AppCard style={styles.card}>
         <AppInput
           label="Nama Produk"
-          placeholder="cth. Nasi Goreng"
+          placeholder="cth. Oli"
           value={form.name}
           onChangeText={(v) => setForm({ ...form, name: v })}
         />
         <AppInput
           label="SKU"
-          placeholder="cth. NG-001"
+          placeholder="cth. OLI-001"
           value={form.sku}
           onChangeText={(v) => setForm({ ...form, sku: v })}
           autoCapitalize="characters"
@@ -151,16 +157,20 @@ export function ProductFormScreen() {
 
         {/* Category Dropdown */}
         <View style={styles.fieldGroup}>
-          <AppText variant="caption" style={styles.fieldLabel}>Kategori</AppText>
+          <AppText variant="caption" style={styles.fieldLabel}>
+            Kategori
+          </AppText>
           <Pressable
             style={styles.dropdown}
             onPress={() => setShowCategoryPicker(!showCategoryPicker)}
           >
             <AppText
               variant="body"
-              style={form.category ? styles.dropdownText : styles.dropdownPlaceholder}
+              style={
+                form.category ? styles.dropdownText : styles.dropdownPlaceholder
+              }
             >
-              {form.category || 'Pilih kategori...'}
+              {form.category || "Pilih kategori..."}
             </AppText>
             <ChevronDown size={18} color={colors.textMuted} />
           </Pressable>
@@ -173,7 +183,10 @@ export function ProductFormScreen() {
                   return (
                     <Pressable
                       key={cat.id}
-                      style={[styles.pickerItem, selected && styles.pickerItemSelected]}
+                      style={[
+                        styles.pickerItem,
+                        selected && styles.pickerItemSelected,
+                      ]}
                       onPress={() => {
                         setForm({ ...form, category: cat.name });
                         setShowCategoryPicker(false);
@@ -202,7 +215,7 @@ export function ProductFormScreen() {
 
       <View style={styles.actions}>
         <AppButton
-          title={isEdit ? 'Perbarui Produk' : 'Simpan Produk'}
+          title={isEdit ? "Perbarui Produk" : "Simpan Produk"}
           onPress={handleSave}
           loading={loading}
           fullWidth
@@ -230,7 +243,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.md,
   },
   halfInput: {
@@ -241,13 +254,13 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     marginBottom: spacing.xs,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.textSecondary,
   },
   dropdown: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     height: 46,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -267,15 +280,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.card,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   pickerScroll: {
     maxHeight: 200,
   },
   pickerItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
@@ -286,11 +299,11 @@ const styles = StyleSheet.create({
   },
   pickerTextSelected: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   pickerEmpty: {
     padding: spacing.lg,
-    textAlign: 'center',
+    textAlign: "center",
   },
   actions: {
     marginTop: spacing.xl,

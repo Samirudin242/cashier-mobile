@@ -123,13 +123,25 @@ export const transactionRepository = {
 
   async upsertFromCloud(data: any, deviceId: string): Promise<void> {
     const db = await getDatabase();
-    const existing = await db.getFirstAsync<any>(
+    const now = nowISO();
+
+    let existing = await db.getFirstAsync<any>(
       'SELECT * FROM transactions WHERE cloud_id = ?',
       [data.id]
     );
-
-    const now = nowISO();
     if (!existing) {
+      existing = await db.getFirstAsync<any>(
+        'SELECT * FROM transactions WHERE transaction_number = ?',
+        [data.transaction_number]
+      );
+    }
+
+    if (existing) {
+      await db.runAsync(
+        `UPDATE transactions SET cloud_id = ?, sync_status = 'synced', last_synced_at = ?, updated_at_local = ? WHERE local_id = ?`,
+        [data.id, now, now, existing.local_id]
+      );
+    } else {
       await db.runAsync(
         `INSERT INTO transactions (local_id, cloud_id, transaction_number, customer_id, customer_name, customer_whatsapp, employee_id, employee_name, subtotal, discount, tax, total, payment_method, notes, transaction_date, sync_status, created_at_local, updated_at_local, last_synced_at, device_id, created_by, updated_by, is_deleted)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced', ?, ?, ?, ?, ?, ?, ?)`,
@@ -142,6 +154,38 @@ export const transactionRepository = {
     const db = await getDatabase();
     const result = await db.getFirstAsync<any>('SELECT COUNT(*) as count FROM transactions WHERE is_deleted = 0');
     return result?.count ?? 0;
+  },
+
+  async getByCloudId(cloudId: string): Promise<Transaction | null> {
+    const db = await getDatabase();
+    const row = await db.getFirstAsync<any>(
+      'SELECT * FROM transactions WHERE cloud_id = ?',
+      [cloudId]
+    );
+    return row ? mapRowToTransaction(row) : null;
+  },
+
+  async getLocalIdByCloudId(cloudId: string): Promise<string | null> {
+    const db = await getDatabase();
+    const row = await db.getFirstAsync<any>(
+      'SELECT local_id FROM transactions WHERE cloud_id = ?',
+      [cloudId]
+    );
+    return row?.local_id ?? null;
+  },
+
+  async replaceItemsFromCloud(localTransactionId: string, items: { product_name: string; product_price: number; handling_fee: number; quantity: number; subtotal: number }[]): Promise<void> {
+    const db = await getDatabase();
+    await db.withExclusiveTransactionAsync(async (txn) => {
+      await txn.runAsync('DELETE FROM transaction_items WHERE transaction_local_id = ?', [localTransactionId]);
+      for (const item of items) {
+        await txn.runAsync(
+          `INSERT INTO transaction_items (local_id, transaction_local_id, product_local_id, product_name, product_price, handling_fee, quantity, subtotal)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [generateLocalId(), localTransactionId, '', item.product_name, item.product_price, item.handling_fee ?? 0, item.quantity, item.subtotal]
+        );
+      }
+    });
   },
 
   async getDailySummary(days: number = 7): Promise<{ date: string; total: number; count: number }[]> {

@@ -6,6 +6,7 @@ import {
   Clock,
   ShoppingCart,
   LogOut,
+  Trash2,
   Calendar,
   TrendingUp,
 } from 'lucide-react-native';
@@ -13,6 +14,7 @@ import { AppScreen, AppCard, AppText, AppButton, AppStatCard, AppSectionHeader }
 import { useAuthStore } from '../../stores/authStore';
 import { transactionRepository } from '../../repositories/transactionRepository';
 import { attendanceRepository } from '../../repositories/attendanceRepository';
+import { getDatabase } from '../../database/sqlite/client';
 import { formatCurrency } from '../../utils/helpers';
 import { colors, spacing, radius } from '../../config/theme';
 
@@ -34,6 +36,38 @@ export function ProfileScreen() {
       })();
     }, [user])
   );
+
+  const handleClearData = () => {
+    Alert.alert(
+      'Hapus Data Lokal',
+      'Ini akan menghapus SEMUA data lokal termasuk data yang belum disinkronkan. Tindakan ini tidak dapat dibatalkan.',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus Semua',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const db = await getDatabase();
+              await db.execAsync(`
+                DELETE FROM transaction_items;
+                DELETE FROM transactions;
+                DELETE FROM products;
+                DELETE FROM customers;
+                DELETE FROM attendance;
+                DELETE FROM payroll_cache;
+                DELETE FROM salary_slip_metadata;
+                DELETE FROM sync_log;
+              `);
+              Alert.alert('Selesai', 'Semua data lokal telah dihapus.');
+            } catch (err: any) {
+              Alert.alert('Kesalahan', err.message);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleLogout = () => {
     Alert.alert('Keluar', 'Apakah Anda yakin?', [
@@ -86,7 +120,16 @@ export function ProfileScreen() {
         </View>
       </AppCard>
 
-      <View style={styles.logoutSection}>
+      <View style={styles.actionSection}>
+        <AppButton
+          title="Hapus Data Lokal"
+          onPress={handleClearData}
+          variant="outline"
+          icon={<Trash2 size={18} color={colors.error} />}
+          fullWidth
+          size="lg"
+          style={styles.clearBtn}
+        />
         <AppButton
           title="Keluar"
           onPress={handleLogout}
@@ -157,7 +200,11 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
   },
-  logoutSection: {
+  actionSection: {
     marginTop: spacing.xxl,
+  },
+  clearBtn: {
+    marginBottom: spacing.md,
+    borderColor: colors.error,
   },
 });
