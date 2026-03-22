@@ -72,13 +72,14 @@ export const userRepository = {
 
   async getEmployeeTransactionBonus(employeeId: string, startDate: string, endDate: string, bonusPercent: number) {
     const db = await getDatabase();
+    // Use date() for robust filtering across ISO/format variations (e.g. from Supabase sync)
     const rows = await db.getAllAsync<any>(
       `SELECT t.local_id, t.transaction_number, t.transaction_date,
               SUM(ti.subtotal) as items_total,
               SUM(ti.handling_fee * ti.quantity) as handling_total
        FROM transactions t
        JOIN transaction_items ti ON ti.transaction_local_id = t.local_id
-       WHERE t.employee_id = ? AND t.transaction_date >= ? AND t.transaction_date <= ? AND t.is_deleted = 0
+       WHERE t.employee_id = ? AND date(t.transaction_date) >= date(?) AND date(t.transaction_date) <= date(?) AND t.is_deleted = 0
        GROUP BY t.local_id
        ORDER BY t.transaction_date ASC`,
       [employeeId, startDate, endDate]

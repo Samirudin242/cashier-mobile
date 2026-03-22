@@ -7,14 +7,13 @@ import { colors, spacing, radius } from '../../config/theme';
 
 export function LoginScreen() {
   const [code, setCode] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const loginWithCode = useAuthStore((s) => s.loginWithCode);
+  const isAuthBusy = useAuthStore((s) => s.isAuthBusy);
 
   const handleLogin = async () => {
     if (!code.trim()) return;
     setError('');
-    setLoading(true);
     try {
       const result = await loginWithCode(code);
       if (!result.success) {
@@ -24,8 +23,6 @@ export function LoginScreen() {
       const msg = err?.message || String(err);
       console.error('[LoginScreen] Error:', msg);
       setError(msg);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -60,7 +57,7 @@ export function LoginScreen() {
           <AppButton
             title="Masuk"
             onPress={handleLogin}
-            loading={loading}
+            loading={isAuthBusy}
             disabled={!code.trim()}
             fullWidth
             size="lg"

@@ -81,4 +81,33 @@ export const syncRepository = {
       [cutoff.toISOString()]
     );
   },
+
+  async getPendingSyncDetail(): Promise<{
+    products: { local_id: string; name: string; sku: string; sync_status: string }[];
+    transactions: { local_id: string; transaction_number: string; transaction_date: string; total: number; sync_status: string }[];
+    customers: { local_id: string; name: string; whatsapp: string; sync_status: string }[];
+    attendance: { local_id: string; employee_name: string; date: string; clock_in: string; sync_status: string }[];
+  }> {
+    const db = await getDatabase();
+
+    const products = await db.getAllAsync<any>(
+      "SELECT local_id, name, sku, sync_status FROM products WHERE sync_status IN ('pending_upload', 'pending_delete', 'failed') ORDER BY updated_at_local DESC"
+    );
+    const transactions = await db.getAllAsync<any>(
+      "SELECT local_id, transaction_number, transaction_date, total, sync_status FROM transactions WHERE sync_status IN ('pending_upload', 'pending_delete', 'failed') ORDER BY transaction_date DESC"
+    );
+    const customers = await db.getAllAsync<any>(
+      "SELECT local_id, name, whatsapp, sync_status FROM customers WHERE sync_status IN ('pending_upload', 'pending_delete', 'failed') ORDER BY updated_at_local DESC"
+    );
+    const attendance = await db.getAllAsync<any>(
+      "SELECT local_id, employee_name, date, clock_in, sync_status FROM attendance WHERE sync_status IN ('pending_upload', 'pending_delete', 'failed') ORDER BY date DESC"
+    );
+
+    return {
+      products: products ?? [],
+      transactions: transactions ?? [],
+      customers: customers ?? [],
+      attendance: attendance ?? [],
+    };
+  },
 };

@@ -54,7 +54,7 @@ export function EmployeeSalaryScreen() {
 
     const [attendance, transactions] = await Promise.all([
       userRepository.getEmployeeAttendance(employee.id, start, end),
-      userRepository.getEmployeeTransactionBonus(employee.id, start + 'T00:00:00', end + 'T23:59:59', employee.bonus_percent),
+      userRepository.getEmployeeTransactionBonus(employee.id, start, end, employee.bonus_percent),
     ]);
 
     const daysWorked = attendance.filter((a: any) => a.status === 'present' || a.status === 'late').length;

@@ -27,6 +27,7 @@ import { TransactionSuccessScreen } from "../screens/checkout/TransactionSuccess
 import { TransactionsScreen } from "../screens/transactions/TransactionsScreen";
 import { TransactionDetailScreen } from "../screens/transactions/TransactionDetailScreen";
 import { SyncCenterScreen } from "../screens/sync/SyncCenterScreen";
+import { PendingSyncDetailScreen } from "../screens/sync/PendingSyncDetailScreen";
 import { ReportsScreen } from "../screens/reports/ReportsScreen";
 import { AttendanceScreen } from "../screens/attendance/AttendanceScreen";
 import { SettingsScreen } from "../screens/settings/SettingsScreen";
@@ -215,9 +216,8 @@ function EmployeeTabs() {
       />
       <Tab.Screen
         name="SyncTab"
-        component={SyncCenterScreen}
+        component={SyncStack}
         options={{
-          ...screenOptions,
           headerShown: false,
           tabBarLabel: "Sinkron",
           tabBarIcon: ({ color, size }) => (
@@ -307,7 +307,15 @@ function OwnerTabs() {
 
 function SyncStack() {
   return (
-    <Stack.Navigator screenOptions={screenOptions}>
+    <Stack.Navigator
+      screenOptions={screenOptions}
+      initialRouteName="SyncMain"
+    >
+      <Stack.Screen
+        name="PendingSyncDetail"
+        component={PendingSyncDetailScreen}
+        options={{ title: "Data Menunggu Sinkronisasi" }}
+      />
       <Stack.Screen
         name="SyncMain"
         component={SyncCenterScreen}

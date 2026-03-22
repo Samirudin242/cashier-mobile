@@ -10,6 +10,7 @@ interface AuthState {
   user: User | null;
   deviceId: string;
   isLoading: boolean;
+  isAuthBusy: boolean;
   isAuthenticated: boolean;
 
   initialize: () => Promise<void>;
@@ -24,6 +25,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   deviceId: "",
   isLoading: true,
+  isAuthBusy: false,
   isAuthenticated: false,
 
   initialize: async () => {
@@ -48,14 +50,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   loginWithCode: async (code: string) => {
+    set({ isAuthBusy: true });
     try {
       const trimmed = code.trim().toUpperCase();
       if (!trimmed) {
+        set({ isAuthBusy: false });
         return { success: false, error: "Silakan masukkan kode akses Anda" };
       }
 
       const user = await userRepository.findByAccessCode(trimmed);
       if (!user) {
+        set({ isAuthBusy: false });
         return {
           success: false,
           error: "Kode akses tidak valid. Silakan coba lagi.",
@@ -63,6 +68,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       if (!user.is_active) {
+        set({ isAuthBusy: false });
         return { success: false, error: "Akun ini telah dinonaktifkan." };
       }
 
@@ -74,6 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           await userRepository.checkCloudDeviceLock(trimmed);
 
         if (lockedDevice && lockedDevice !== deviceId) {
+          set({ isAuthBusy: false });
           return {
             success: false,
             error:
@@ -94,31 +101,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Persist session
       await SecureStore.setItemAsync(AUTH_KEY, JSON.stringify(user));
-      set({ user, isAuthenticated: true });
+      set({ user, isAuthenticated: true, isAuthBusy: false });
       return { success: true };
     } catch (err: any) {
       const msg = err?.message || String(err);
       console.error("[Login] Unexpected error:", msg);
+      set({ isAuthBusy: false });
       return { success: false, error: msg };
     }
   },
 
   logout: async () => {
-    const { user } = get();
+    set({ isAuthBusy: true });
+    try {
+      const { user } = get();
 
-    // Release device lock in Supabase
-    if (user) {
-      try {
-        await userRepository.unlockDeviceInCloud(user.access_code);
-      } catch {
-        // Best-effort: if offline, the lock remains until the next successful logout.
-        // This is acceptable — the user can retry logout when back online.
+      // Release device lock in Supabase
+      if (user) {
+        try {
+          await userRepository.unlockDeviceInCloud(user.access_code);
+        } catch {
+          // Best-effort: if offline, the lock remains until the next successful logout.
+        }
+        await userRepository.setLocalDeviceLock(user.id, null);
       }
-      await userRepository.setLocalDeviceLock(user.id, null);
-    }
 
-    await SecureStore.deleteItemAsync(AUTH_KEY);
-    set({ user: null, isAuthenticated: false });
+      await SecureStore.deleteItemAsync(AUTH_KEY);
+      set({ user: null, isAuthenticated: false });
+    } finally {
+      set({ isAuthBusy: false });
+    }
   },
 
   isOwner: () => get().user?.role === "owner",

@@ -8,7 +8,7 @@ import { useAuthStore } from './src/stores/authStore';
 
 export default function App() {
   const [dbReady, setDbReady] = useState(false);
-  const { isLoading, initialize } = useAuthStore();
+  const { isLoading, isAuthBusy, initialize } = useAuthStore();
 
   useEffect(() => {
     (async () => {
@@ -18,10 +18,13 @@ export default function App() {
     })();
   }, []);
 
-  if (!dbReady || isLoading) {
+  const showLoader = !dbReady || isLoading || isAuthBusy;
+  const loaderMessage = isAuthBusy ? 'Memproses...' : 'Memuat Kasir POS...';
+
+  if (showLoader) {
     return (
       <SafeAreaProvider>
-        <AppLoader message="Memuat Kasir POS..." />
+        <AppLoader message={loaderMessage} />
         <StatusBar style="dark" />
       </SafeAreaProvider>
     );
