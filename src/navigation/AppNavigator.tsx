@@ -158,7 +158,7 @@ function HomeStack() {
 
 const tabBarOptions = {
   tabBarActiveTintColor: colors.primary,
-  tabBarInactiveTintColor: colors.textMuted,
+  tabBarInactiveTintColor: colors.textSecondary,
   tabBarStyle: {
     backgroundColor: colors.card,
     borderTopColor: colors.borderLight,

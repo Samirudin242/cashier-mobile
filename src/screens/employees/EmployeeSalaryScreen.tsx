@@ -195,7 +195,7 @@ export function EmployeeSalaryScreen() {
         <AppStatCard
           title={`Bonus ${employee.bonus_percent}%`}
           value={formatCurrency(salary.bonus)}
-          subtitle={`${salary.transactions.length} transaksi`}
+          subtitle={`${salary.transactions.length} transaksi (per item)`}
           icon={<Award size={16} color={colors.warning} />}
           accentColor={colors.warning}
         />
@@ -256,6 +256,20 @@ export function EmployeeSalaryScreen() {
                 <AppText variant="bodySemibold" style={styles.bonusValue}>{formatCurrency(t.bonus)}</AppText>
               </View>
             </View>
+            {t.items && t.items.length > 0 && (
+              <View style={styles.itemBreakdown}>
+                {t.items.map((item, j) => (
+                  <View key={j} style={styles.itemRow}>
+                    <AppText variant="caption" style={styles.itemName}>
+                      • {item.productName} (×{item.quantity})
+                    </AppText>
+                    <AppText variant="caption" style={styles.itemBonus}>
+                      {formatCurrency(item.handlingFee)} × {employee.bonus_percent}% = {formatCurrency(item.bonus)}
+                    </AppText>
+                  </View>
+                ))}
+              </View>
+            )}
           </AppCard>
         ))
       )}
@@ -355,6 +369,25 @@ const styles = StyleSheet.create({
   },
   bonusCol: {
     alignItems: 'flex-end',
+  },
+  itemBreakdown: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  itemName: {
+    flex: 1,
+  },
+  itemBonus: {
+    color: colors.textMuted,
+    marginLeft: spacing.sm,
   },
   bonusLabel: {
     fontSize: 11,

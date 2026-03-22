@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Linking, FlatList } from 'react-native';
+import { View, StyleSheet, Linking } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { Receipt, MessageCircle, Printer } from 'lucide-react-native';
 import { AppScreen, AppCard, AppText, AppButton, SyncBadge } from '../../components/ui';
+import { PrinterDevicePickerModal } from '../../components/PrinterDevicePickerModal';
 import { transactionRepository } from '../../repositories/transactionRepository';
+import { buildReceiptData } from '../../services/printerService';
+import { usePrintReceipt } from '../../hooks/usePrintReceipt';
 import { Transaction, TransactionItem } from '../../types';
 import { formatCurrency, formatDateTime } from '../../utils/helpers';
 import { colors, spacing, radius } from '../../config/theme';
@@ -13,6 +16,7 @@ export function TransactionDetailScreen() {
   const { localId } = route.params;
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [items, setItems] = useState<TransactionItem[]>([]);
+  const printReceiptFlow = usePrintReceipt();
 
   useEffect(() => {
     (async () => {
@@ -35,6 +39,11 @@ export function TransactionDetailScreen() {
       ? `whatsapp://send?phone=${phone}&text=${encodeURIComponent(message)}`
       : `whatsapp://send?text=${encodeURIComponent(message)}`;
     Linking.openURL(url).catch(() => {});
+  };
+
+  const handlePrintReceipt = () => {
+    if (!transaction) return;
+    printReceiptFlow.handlePrint(buildReceiptData(transaction, items));
   };
 
   if (!transaction) return null;
@@ -92,11 +101,12 @@ export function TransactionDetailScreen() {
       <View style={styles.actions}>
         <AppButton
           title="Cetak Struk"
-          onPress={() => {}}
+          onPress={handlePrintReceipt}
           variant="outline"
           icon={<Printer size={18} color={colors.text} />}
           fullWidth
           size="lg"
+          loading={printReceiptFlow.isPrinting}
         />
         <AppButton
           title="Kirim WhatsApp"
@@ -108,6 +118,15 @@ export function TransactionDetailScreen() {
           style={{ marginTop: spacing.sm }}
         />
       </View>
+
+      <PrinterDevicePickerModal
+        visible={printReceiptFlow.showPicker}
+        onClose={printReceiptFlow.closePicker}
+        devices={printReceiptFlow.devices}
+        loading={printReceiptFlow.loadingDevices}
+        onRefresh={printReceiptFlow.loadDevices}
+        onSelectDevice={printReceiptFlow.selectDeviceAndPrint}
+      />
     </AppScreen>
   );
 }

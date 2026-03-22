@@ -1,7 +1,22 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
 import { EmployeeSalary } from '../types';
 import { formatCurrency } from '../utils/helpers';
+
+const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+function slugify(text: string): string {
+  return text.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+}
+
+function getPdfFilename(salary: EmployeeSalary): string {
+  const empName = slugify(salary.employee.name);
+  const [year, monthStr] = salary.periodStart.split('-');
+  const monthNum = parseInt(monthStr, 10);
+  const monthName = MONTH_NAMES[monthNum - 1] ?? monthStr;
+  return `Slip-Gaji-${empName}-${monthName}-${year}.pdf`;
+}
 
 export async function generateSalaryPdf(salary: EmployeeSalary): Promise<void> {
   const attendanceRows = salary.attendanceDetails
@@ -19,17 +34,30 @@ export async function generateSalaryPdf(salary: EmployeeSalary): Promise<void> {
 
   const bonusPct = salary.employee.bonus_percent;
   const bonusRows = salary.transactions
-    .map(
-      (t, i) =>
+    .map((t, i) => {
+      const itemRows = (t.items ?? [])
+        .map(
+          (item) =>
+            `<tr style="background:#FAFAFA;">
+              <td></td>
+              <td colspan="2" style="padding-left:20px;">• ${item.productName} (×${item.quantity})</td>
+              <td>${formatCurrency(item.handlingFee)}</td>
+              <td></td>
+              <td>${formatCurrency(item.bonus)}</td>
+            </tr>`
+        )
+        .join('');
+      return (
         `<tr>
           <td>${i + 1}</td>
           <td>${t.date.split('T')[0]}</td>
-          <td>${formatCurrency(t.itemsTotal)}</td>
+          <td>${t.transactionNumber ?? '-'}</td>
           <td>${formatCurrency(t.handlingTotal)}</td>
-          <td>${formatCurrency(t.net)}</td>
+          <td></td>
           <td>${formatCurrency(t.bonus)}</td>
-        </tr>`
-    )
+        </tr>` + itemRows
+      );
+    })
     .join('');
 
   const html = `
@@ -78,9 +106,9 @@ export async function generateSalaryPdf(salary: EmployeeSalary): Promise<void> {
     </table>
 
     <h2>Detail Bonus Penjualan (${bonusPct}%)</h2>
-    <p style="color:#666;font-size:11px;margin-bottom:8px;">Rumus: (Total Item − Biaya Penanganan) × ${bonusPct}%</p>
+    <p style="color:#666;font-size:11px;margin-bottom:8px;">Rumus per item: Biaya Penanganan × ${bonusPct}% = Bonus. Total bonus = jumlah bonus tiap item.</p>
     <table>
-      <thead><tr><th>#</th><th>Tanggal</th><th>Total Item</th><th>Penanganan</th><th>Netto</th><th>Bonus</th></tr></thead>
+      <thead><tr><th>#</th><th>Tanggal</th><th>Transaksi</th><th>Penanganan</th><th></th><th>Bonus</th></tr></thead>
       <tbody>${bonusRows || '<tr><td colspan="6" style="text-align:center;color:#aaa;">Tidak ada data</td></tr>'}</tbody>
     </table>
 
@@ -89,7 +117,12 @@ export async function generateSalaryPdf(salary: EmployeeSalary): Promise<void> {
   </html>`;
 
   const { uri } = await Print.printToFileAsync({ html, base64: false });
-  await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Slip Gaji' });
+  const dir = uri.slice(0, uri.lastIndexOf('/') + 1);
+  const filename = getPdfFilename(salary);
+  const newUri = `${dir}${filename}`;
+
+  await FileSystem.moveAsync({ from: uri, to: newUri });
+  await Sharing.shareAsync(newUri, { mimeType: 'application/pdf', dialogTitle: 'Slip Gaji' });
 }
 
 function statusLabel(status: string): string {

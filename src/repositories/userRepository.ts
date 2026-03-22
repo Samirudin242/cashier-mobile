@@ -72,30 +72,58 @@ export const userRepository = {
 
   async getEmployeeTransactionBonus(employeeId: string, startDate: string, endDate: string, bonusPercent: number) {
     const db = await getDatabase();
+    const pct = bonusPercent / 100;
     // Use date() for robust filtering across ISO/format variations (e.g. from Supabase sync)
     const rows = await db.getAllAsync<any>(
       `SELECT t.local_id, t.transaction_number, t.transaction_date,
-              SUM(ti.subtotal) as items_total,
-              SUM(ti.handling_fee * ti.quantity) as handling_total
+              ti.product_name, ti.handling_fee, ti.quantity, ti.subtotal
        FROM transactions t
        JOIN transaction_items ti ON ti.transaction_local_id = t.local_id
        WHERE t.employee_id = ? AND date(t.transaction_date) >= date(?) AND date(t.transaction_date) <= date(?) AND t.is_deleted = 0
-       GROUP BY t.local_id
-       ORDER BY t.transaction_date ASC`,
+       ORDER BY t.transaction_date ASC, ti.local_id ASC`,
       [employeeId, startDate, endDate]
     );
-    const pct = bonusPercent / 100;
-    return rows.map((r: any) => {
-      const itemsTotal = r.items_total as number;
-      const handlingTotal = (r.handling_total as number) ?? 0;
-      const net = Math.max(0, itemsTotal - handlingTotal);
+
+    // Group by transaction, compute per-item bonus (handling_fee * quantity * pct)
+    const txMap = new Map<string, { transactionNumber: string; date: string; items: any[]; itemsTotal: number; handlingTotal: number }>();
+    for (const r of rows) {
+      const tid = r.local_id;
+      const handlingFee = (r.handling_fee as number) ?? 0;
+      const qty = (r.quantity as number) ?? 1;
+      const handlingForItem = handlingFee * qty;
+      const itemBonus = handlingForItem * pct;
+
+      if (!txMap.has(tid)) {
+        txMap.set(tid, {
+          transactionNumber: r.transaction_number,
+          date: r.transaction_date,
+          items: [],
+          itemsTotal: 0,
+          handlingTotal: 0,
+        });
+      }
+      const tx = txMap.get(tid)!;
+      tx.items.push({
+        productName: r.product_name,
+        handlingFee: handlingForItem,
+        quantity: qty,
+        bonus: itemBonus,
+      });
+      tx.itemsTotal += (r.subtotal as number) ?? 0;
+      tx.handlingTotal += handlingForItem;
+    }
+
+    return Array.from(txMap.values()).map((tx) => {
+      const net = Math.max(0, tx.itemsTotal - tx.handlingTotal);
+      const bonus = tx.items.reduce((sum, i) => sum + i.bonus, 0);
       return {
-        transactionNumber: r.transaction_number,
-        date: r.transaction_date,
-        itemsTotal,
-        handlingTotal,
+        transactionNumber: tx.transactionNumber,
+        date: tx.date,
+        itemsTotal: tx.itemsTotal,
+        handlingTotal: tx.handlingTotal,
         net,
-        bonus: net * pct,
+        bonus,
+        items: tx.items,
       };
     });
   },

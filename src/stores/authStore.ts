@@ -74,7 +74,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const { deviceId } = get();
 
-      // Check Supabase for device lock — skip gracefully if Supabase isn't ready
+      // Device lock requires internet. When offline, skip cloud checks and allow login.
       try {
         const lockedDevice =
           await userRepository.checkCloudDeviceLock(trimmed);
@@ -89,11 +89,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
 
         await userRepository.lockDeviceInCloud(trimmed, deviceId);
-      } catch (supaErr: any) {
-        console.warn(
-          "[Login] Supabase device lock skipped:",
-          supaErr?.message || supaErr
-        );
+      } catch (supaErr: unknown) {
+        // Network error / no internet — allow login for offline use. Device lock skipped.
+        const msg = supaErr instanceof Error ? supaErr.message : String(supaErr);
+        if (__DEV__) console.warn("[Login] Device lock skipped (offline?):", msg);
       }
 
       // Update local DB

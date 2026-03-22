@@ -41,7 +41,15 @@ export interface EmployeeSalary {
   totalSalary: number;
   periodStart: string;
   periodEnd: string;
-  transactions: { transactionNumber?: string; date: string; itemsTotal: number; handlingTotal: number; net: number; bonus: number }[];
+  transactions: {
+    transactionNumber?: string;
+    date: string;
+    itemsTotal: number;
+    handlingTotal: number;
+    net: number;
+    bonus: number;
+    items?: { productName: string; handlingFee: number; quantity: number; bonus: number }[];
+  }[];
   attendanceDetails: { date: string; status: string; clockIn: string; clockOut: string | null }[];
 }
 
