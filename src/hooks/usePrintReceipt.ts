@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
 import { Alert, Platform } from 'react-native';
-import { ThermalPrinterDevice } from 'react-native-thermal-pos-printer';
 import {
   getAvailablePrinters,
   getLastPrinterAddress,
@@ -8,6 +7,7 @@ import {
   isPrinterConnected,
   printReceipt,
   type ReceiptData,
+  type ThermalPrinterDevice,
 } from '../services/printerService';
 
 export function usePrintReceipt() {

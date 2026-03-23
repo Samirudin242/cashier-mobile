@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet, Pressable, Alert, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useOptionalBottomTabBarHeight } from '../../hooks/useOptionalBottomTabBarHeight';
 import { Minus, Plus, Trash2, CreditCard, Banknote, QrCode, ChevronDown, Check, UserCheck } from 'lucide-react-native';
 import { AppScreen, AppCard, AppText, AppInput, AppButton } from '../../components/ui';
 import { useCartStore } from '../../stores/cartStore';
@@ -12,6 +14,8 @@ import { CartItem, User } from '../../types';
 import { colors, spacing, radius } from '../../config/theme';
 
 export function CartReviewScreen() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useOptionalBottomTabBarHeight();
   const navigation = useNavigation<any>();
   const {
     items, customerName, customerWhatsapp, paymentMethod, discount, notes,
@@ -237,7 +241,16 @@ export function CartReviewScreen() {
         </View>
       </AppCard>
 
-      <View style={styles.actions}>
+      <View
+        style={[
+          styles.actions,
+          {
+            paddingBottom:
+              spacing.xxxl +
+              (tabBarHeight > 0 ? tabBarHeight : Math.max(insets.bottom, 0)),
+          },
+        ]}
+      >
         <AppButton
           title="Selesaikan Transaksi"
           onPress={handleComplete}
@@ -355,7 +368,6 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: spacing.xl,
-    paddingBottom: spacing.xxxl,
   },
   fieldGroup: {
     marginBottom: spacing.xs,

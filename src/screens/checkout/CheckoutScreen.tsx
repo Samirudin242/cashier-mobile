@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, FlatList, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useOptionalBottomTabBarHeight } from '../../hooks/useOptionalBottomTabBarHeight';
 import { ShoppingCart, Search, Package } from 'lucide-react-native';
 import { AppScreen, AppText, AppInput, AppEmptyState } from '../../components/ui';
 import { productRepository } from '../../repositories/productRepository';
@@ -38,6 +40,8 @@ const ProductTile = React.memo(({ item, qty, onPress }: { item: Product; qty: nu
 ));
 
 export function CheckoutScreen() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useOptionalBottomTabBarHeight();
   const navigation = useNavigation<any>();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -91,6 +95,17 @@ export function CheckoutScreen() {
     />
   ), [cartMap, addItem]);
 
+  const listBottomPad = useMemo(() => {
+    const systemBottom = tabBarHeight > 0 ? 0 : Math.max(insets.bottom, 0);
+    const cartInnerBottom =
+      tabBarHeight > 0 ? spacing.base : spacing.base + systemBottom;
+    const cartBarHeight = spacing.base + 32 + cartInnerBottom;
+    if (itemCount > 0) {
+      return tabBarHeight + cartBarHeight + spacing.lg;
+    }
+    return spacing.xxxl + tabBarHeight;
+  }, [itemCount, insets.bottom, tabBarHeight]);
+
   return (
     <View style={styles.container}>
       <AppScreen scroll={false} padded={false}>
@@ -126,7 +141,7 @@ export function CheckoutScreen() {
           keyExtractor={(item) => item.local_id}
           numColumns={2}
           columnWrapperStyle={styles.gridRow}
-          contentContainerStyle={styles.gridContent}
+          contentContainerStyle={[styles.gridContent, { paddingBottom: listBottomPad }]}
           showsVerticalScrollIndicator={false}
           initialNumToRender={16}
           maxToRenderPerBatch={12}
@@ -146,7 +161,16 @@ export function CheckoutScreen() {
 
       {itemCount > 0 && (
         <Pressable
-          style={styles.cartBar}
+          style={[
+            styles.cartBar,
+            {
+              bottom: tabBarHeight,
+              paddingBottom:
+                tabBarHeight > 0
+                  ? spacing.base
+                  : spacing.base + Math.max(insets.bottom, 0),
+            },
+          ]}
           onPress={() => navigation.navigate('CartReview')}
         >
           <View style={styles.cartLeft}>
@@ -209,7 +233,6 @@ const styles = StyleSheet.create({
   },
   gridContent: {
     paddingHorizontal: spacing.base,
-    paddingBottom: 100,
   },
   gridRow: {
     gap: spacing.sm,
@@ -266,7 +289,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingVertical: spacing.base,
+    paddingTop: spacing.base,
     paddingHorizontal: spacing.lg,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,

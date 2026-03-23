@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, FlatList, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
-import { ThermalPrinterDevice } from 'react-native-thermal-pos-printer';
 import { AppModal, AppText, AppButton } from './ui';
+import type { ThermalPrinterDevice } from '../services/printerService';
 import { colors, spacing } from '../config/theme';
 
 interface Props {

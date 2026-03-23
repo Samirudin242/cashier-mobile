@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Home,
   Package,
@@ -156,26 +157,37 @@ function HomeStack() {
   );
 }
 
-const tabBarOptions = {
-  tabBarActiveTintColor: colors.primary,
-  tabBarInactiveTintColor: colors.textSecondary,
-  tabBarStyle: {
-    backgroundColor: colors.card,
-    borderTopColor: colors.borderLight,
-    borderTopWidth: 1,
-    paddingTop: 4,
-    height: 85,
-  },
-  tabBarLabelStyle: {
-    fontSize: 11,
-    fontWeight: "500" as const,
-  },
-  headerShown: false,
-};
+/** Tab bar content (icons + labels) + safe bottom inset so system nav bar does not overlap (e.g. Vivo / edge-to-edge). */
+function useTabBarScreenOptions() {
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 10);
+  const contentHeight = 52;
+  return useMemo(
+    () => ({
+      tabBarActiveTintColor: colors.primary,
+      tabBarInactiveTintColor: colors.textSecondary,
+      tabBarStyle: {
+        backgroundColor: colors.card,
+        borderTopColor: colors.borderLight,
+        borderTopWidth: 1,
+        paddingTop: 6,
+        paddingBottom: bottomPad,
+        height: contentHeight + 6 + bottomPad,
+      },
+      tabBarLabelStyle: {
+        fontSize: 11,
+        fontWeight: "500" as const,
+      },
+      headerShown: false,
+    }),
+    [bottomPad]
+  );
+}
 
 function EmployeeTabs() {
+  const tabScreenOptions = useTabBarScreenOptions();
   return (
-    <Tab.Navigator screenOptions={tabBarOptions}>
+    <Tab.Navigator screenOptions={tabScreenOptions}>
       <Tab.Screen
         name="HomeTab"
         component={HomeStack}
@@ -239,8 +251,9 @@ function EmployeeTabs() {
 }
 
 function OwnerTabs() {
+  const tabScreenOptions = useTabBarScreenOptions();
   return (
-    <Tab.Navigator screenOptions={tabBarOptions}>
+    <Tab.Navigator screenOptions={tabScreenOptions}>
       <Tab.Screen
         name="HomeTab"
         component={HomeStack}

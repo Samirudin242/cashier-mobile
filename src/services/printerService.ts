@@ -1,10 +1,33 @@
 /**
  * Bluetooth thermal printer service for ESC/POS 58mm printers (e.g. EPPOS RPP02).
  * Uses react-native-thermal-pos-printer for Bluetooth connectivity.
+ * Lazy-loads native module to avoid crash in Expo Go / when not built with native code.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import ReactNativePosPrinter, { ThermalPrinterDevice } from 'react-native-thermal-pos-printer';
 import { Platform, PermissionsAndroid } from 'react-native';
+
+const NOT_AVAILABLE_MSG =
+  'Printer Bluetooth tidak tersedia. Jalankan dengan development build: npx expo run:android';
+
+type PrinterModule = typeof import('react-native-thermal-pos-printer').default;
+let _printerModule: PrinterModule | false | null = null;
+
+function getPrinterModule(): PrinterModule {
+  if (_printerModule === null) {
+    try {
+      const mod = require('react-native-thermal-pos-printer');
+      _printerModule = mod.default;
+    } catch {
+      _printerModule = false;
+    }
+  }
+  if (!_printerModule) {
+    throw new Error(NOT_AVAILABLE_MSG);
+  }
+  return _printerModule;
+}
+
+export type ThermalPrinterDevice = import('react-native-thermal-pos-printer').ThermalPrinterDevice;
 import { formatCurrency, formatDateTime } from '../utils/helpers';
 import type { Transaction, TransactionItem } from '../types';
 
@@ -17,6 +40,7 @@ let initialized = false;
 
 async function ensureInit(): Promise<void> {
   if (initialized) return;
+  const ReactNativePosPrinter = getPrinterModule();
   await ReactNativePosPrinter.init();
   initialized = true;
 }
@@ -53,6 +77,7 @@ export async function getAvailablePrinters(): Promise<ThermalPrinterDevice[]> {
   if (!hasPermission) {
     throw new Error('Izin Bluetooth diperlukan. Aktifkan di Pengaturan.');
   }
+  const ReactNativePosPrinter = getPrinterModule();
   const devices = await ReactNativePosPrinter.getDeviceList();
   return devices.filter((d) => d.getType() === 'BLUETOOTH');
 }
@@ -60,6 +85,7 @@ export async function getAvailablePrinters(): Promise<ThermalPrinterDevice[]> {
 /** Connect to printer by address */
 export async function connectPrinter(address: string): Promise<ThermalPrinterDevice> {
   await ensureInit();
+  const ReactNativePosPrinter = getPrinterModule();
   const device = await ReactNativePosPrinter.connectPrinter(address, {
     type: 'BLUETOOTH',
     encoding: 'UTF-8',
@@ -82,6 +108,7 @@ export async function clearSavedPrinter(): Promise<void> {
 export async function isPrinterConnected(): Promise<boolean> {
   try {
     await ensureInit();
+    const ReactNativePosPrinter = getPrinterModule();
     return await ReactNativePosPrinter.isConnected();
   } catch {
     return false;
@@ -91,6 +118,7 @@ export async function isPrinterConnected(): Promise<boolean> {
 /** Disconnect from printer */
 export async function disconnectPrinter(): Promise<void> {
   try {
+    const ReactNativePosPrinter = getPrinterModule();
     await ReactNativePosPrinter.disconnectPrinter();
   } catch {
     // ignore
@@ -174,6 +202,7 @@ function padRight(left: string, right: string, width = RECEIPT_WIDTH): string {
 /** Print receipt to connected printer */
 export async function printReceipt(data: ReceiptData): Promise<void> {
   await ensureInit();
+  const ReactNativePosPrinter = getPrinterModule();
   const connected = await ReactNativePosPrinter.isConnected();
   if (!connected) {
     throw new Error('Printer tidak terhubung. Pilih printer terlebih dahulu.');
