@@ -14,6 +14,11 @@ import { colors, spacing, radius, shadows } from '../../config/theme';
 
 const ALL_CATEGORY = 'Semua';
 
+/** Fixed height for the floating cart bar (icon row + padding) */
+const CART_BAR_HEIGHT = 56;
+/** Tab bar content height (icons + labels) from AppNavigator */
+const TAB_BAR_CONTENT_HEIGHT = 58;
+
 const ProductTile = React.memo(({ item, qty, onPress }: { item: Product; qty: number; onPress: () => void }) => (
   <Pressable
     style={({ pressed }) => [styles.productCard, pressed && styles.productPressed]}
@@ -95,16 +100,15 @@ export function CheckoutScreen() {
     />
   ), [cartMap, addItem]);
 
+  const effectiveTabBarHeight =
+    tabBarHeight > 0 ? tabBarHeight : TAB_BAR_CONTENT_HEIGHT + Math.max(insets.bottom, 10);
+
   const listBottomPad = useMemo(() => {
-    const systemBottom = tabBarHeight > 0 ? 0 : Math.max(insets.bottom, 0);
-    const cartInnerBottom =
-      tabBarHeight > 0 ? spacing.base : spacing.base + systemBottom;
-    const cartBarHeight = spacing.base + 32 + cartInnerBottom;
     if (itemCount > 0) {
-      return tabBarHeight + cartBarHeight + spacing.lg;
+      return effectiveTabBarHeight + CART_BAR_HEIGHT + spacing.xl + spacing.sm;
     }
-    return spacing.xxxl + tabBarHeight;
-  }, [itemCount, insets.bottom, tabBarHeight]);
+    return spacing.xxxl + effectiveTabBarHeight;
+  }, [itemCount, effectiveTabBarHeight]);
 
   return (
     <View style={styles.container}>
@@ -164,11 +168,9 @@ export function CheckoutScreen() {
           style={[
             styles.cartBar,
             {
-              bottom: tabBarHeight,
-              paddingBottom:
-                tabBarHeight > 0
-                  ? spacing.base
-                  : spacing.base + Math.max(insets.bottom, 0),
+              bottom: effectiveTabBarHeight + spacing.md,
+              left: spacing.base,
+              right: spacing.base,
             },
           ]}
           onPress={() => navigation.navigate('CartReview')}
@@ -283,16 +285,14 @@ const styles = StyleSheet.create({
   },
   cartBar: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingTop: spacing.base,
+    justifyContent: 'space-between',
+    minHeight: CART_BAR_HEIGHT,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    backgroundColor: colors.primary,
+    borderRadius: radius.xl,
     ...shadows.lg,
   },
   cartLeft: {

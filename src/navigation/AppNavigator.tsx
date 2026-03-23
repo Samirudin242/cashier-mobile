@@ -277,9 +277,7 @@ function OwnerTabs() {
         component={EmployeesStack}
         options={{
           tabBarLabel: "Karyawan",
-          tabBarIcon: ({ color, size }) => (
-            <Users size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
         }}
       />
       <Tab.Screen
@@ -320,10 +318,7 @@ function OwnerTabs() {
 
 function SyncStack() {
   return (
-    <Stack.Navigator
-      screenOptions={screenOptions}
-      initialRouteName="SyncMain"
-    >
+    <Stack.Navigator screenOptions={screenOptions} initialRouteName="SyncMain">
       <Stack.Screen
         name="PendingSyncDetail"
         component={PendingSyncDetailScreen}

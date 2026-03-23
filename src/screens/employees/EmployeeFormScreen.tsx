@@ -51,9 +51,15 @@ export function EmployeeFormScreen() {
           bonusPercent: bonusPct,
         });
       } else {
-        const existing = await userRepository.findByAccessCode(form.accessCode);
-        if (existing) {
-          Alert.alert('Kesalahan', 'Kode akses sudah digunakan');
+        const existingLocal = await userRepository.findByAccessCode(form.accessCode);
+        if (existingLocal) {
+          Alert.alert('Kesalahan', 'Kode akses sudah digunakan di perangkat ini');
+          setLoading(false);
+          return;
+        }
+        const existingCloud = await userRepository.findByAccessCodeFromSupabase(form.accessCode.trim().toUpperCase());
+        if (existingCloud) {
+          Alert.alert('Kesalahan', 'Kode akses sudah digunakan. Gunakan kode lain.');
           setLoading(false);
           return;
         }

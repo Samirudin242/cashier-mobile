@@ -58,7 +58,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: false, error: "Silakan masukkan kode akses Anda" };
       }
 
-      const user = await userRepository.findByAccessCode(trimmed);
+      // Always validate user from Supabase (cloud), not local SQLite
+      const user = await userRepository.findByAccessCodeFromSupabase(trimmed);
       if (!user) {
         set({ isAuthBusy: false });
         return {
@@ -74,7 +75,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const { deviceId } = get();
 
-      // Device lock requires internet. When offline, skip cloud checks and allow login.
+      // Device lock in Supabase
       try {
         const lockedDevice =
           await userRepository.checkCloudDeviceLock(trimmed);
@@ -90,13 +91,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         await userRepository.lockDeviceInCloud(trimmed, deviceId);
       } catch (supaErr: unknown) {
-        // Network error / no internet — allow login for offline use. Device lock skipped.
-        const msg = supaErr instanceof Error ? supaErr.message : String(supaErr);
-        if (__DEV__) console.warn("[Login] Device lock skipped (offline?):", msg);
+        const msg = (supaErr instanceof Error ? supaErr.message : String(supaErr)) || "Kesalahan tidak diketahui";
+        set({ isAuthBusy: false });
+        const isNetwork = /fetch|network|internet|ECONNREFUSED/i.test(msg);
+        return {
+          success: false,
+          error: isNetwork ? "Tidak dapat terhubung. Periksa koneksi internet." : msg,
+        };
       }
 
-      // Update local DB
-      await userRepository.setLocalDeviceLock(user.id, deviceId);
+      // Upsert user to local SQLite for offline features (e.g. employee picker)
+      await userRepository.upsertUserToLocal(user);
+      await userRepository.setLocalDeviceLock(user.access_code, deviceId);
 
       // Persist session
       await SecureStore.setItemAsync(AUTH_KEY, JSON.stringify(user));
@@ -122,7 +128,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         } catch {
           // Best-effort: if offline, the lock remains until the next successful logout.
         }
-        await userRepository.setLocalDeviceLock(user.id, null);
+        await userRepository.setLocalDeviceLock(user.access_code, null);
       }
 
       await SecureStore.deleteItemAsync(AUTH_KEY);

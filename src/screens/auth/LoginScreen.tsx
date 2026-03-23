@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Store, KeyRound, LogIn } from 'lucide-react-native';
 import { AppScreen, AppCard, AppButton, AppInput, AppText } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
@@ -17,12 +17,15 @@ export function LoginScreen() {
     try {
       const result = await loginWithCode(code);
       if (!result.success) {
-        setError(result.error ?? 'Gagal masuk');
+        const msg = result.error ?? 'Gagal masuk';
+        setError(msg);
+        Alert.alert('Gagal Masuk', msg, [{ text: 'OK' }]);
       }
     } catch (err: any) {
       const msg = err?.message || String(err);
       console.error('[LoginScreen] Error:', msg);
       setError(msg);
+      Alert.alert('Kesalahan', msg, [{ text: 'OK' }]);
     }
   };
 

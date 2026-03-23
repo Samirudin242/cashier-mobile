@@ -1,12 +1,12 @@
-import { getDatabase } from '../database/sqlite/client';
-import { Attendance, SyncStatus } from '../types';
-import { generateLocalId, nowISO } from '../utils/helpers';
+import { getDatabase } from "../database/sqlite/client";
+import { Attendance, SyncStatus } from "../types";
+import { generateLocalId, nowISO } from "../utils/helpers";
 
 export const attendanceRepository = {
   async getAll(limit = 50): Promise<Attendance[]> {
     const db = await getDatabase();
     const rows = await db.getAllAsync<any>(
-      'SELECT * FROM attendance WHERE is_deleted = 0 ORDER BY date DESC, clock_in DESC LIMIT ?',
+      "SELECT * FROM attendance WHERE is_deleted = 0 ORDER BY date DESC, clock_in DESC LIMIT ?",
       [limit]
     );
     return rows.map(mapRow);
@@ -15,7 +15,7 @@ export const attendanceRepository = {
   async getByDate(date: string): Promise<Attendance[]> {
     const db = await getDatabase();
     const rows = await db.getAllAsync<any>(
-      'SELECT * FROM attendance WHERE is_deleted = 0 AND date = ? ORDER BY clock_in ASC',
+      "SELECT * FROM attendance WHERE is_deleted = 0 AND date = ? ORDER BY clock_in ASC",
       [date]
     );
     return rows.map(mapRow);
@@ -24,7 +24,7 @@ export const attendanceRepository = {
   async getByEmployee(employeeId: string, limit = 30): Promise<Attendance[]> {
     const db = await getDatabase();
     const rows = await db.getAllAsync<any>(
-      'SELECT * FROM attendance WHERE is_deleted = 0 AND employee_id = ? ORDER BY date DESC LIMIT ?',
+      "SELECT * FROM attendance WHERE is_deleted = 0 AND employee_id = ? ORDER BY date DESC LIMIT ?",
       [employeeId, limit]
     );
     return rows.map(mapRow);
@@ -35,7 +35,7 @@ export const attendanceRepository = {
     employee_name: string;
     date: string;
     notes?: string;
-    status?: 'present' | 'late';
+    status?: "present" | "late";
     device_id: string;
   }): Promise<Attendance> {
     const db = await getDatabase();
@@ -45,7 +45,20 @@ export const attendanceRepository = {
     await db.runAsync(
       `INSERT INTO attendance (local_id, employee_id, employee_name, clock_in, date, notes, status, sync_status, created_at_local, updated_at_local, device_id, created_by, updated_by, is_deleted)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_upload', ?, ?, ?, ?, ?, 0)`,
-      [localId, data.employee_id, data.employee_name, now, data.date, data.notes ?? null, data.status ?? 'present', now, now, data.device_id, data.employee_id, data.employee_id]
+      [
+        localId,
+        data.employee_id,
+        data.employee_name,
+        now,
+        data.date,
+        data.notes ?? null,
+        data.status ?? "present",
+        now,
+        now,
+        data.device_id,
+        data.employee_id,
+        data.employee_id,
+      ]
     );
 
     return (await this.getById(localId))!;
@@ -62,15 +75,18 @@ export const attendanceRepository = {
 
   async getById(localId: string): Promise<Attendance | null> {
     const db = await getDatabase();
-    const row = await db.getFirstAsync<any>('SELECT * FROM attendance WHERE local_id = ?', [localId]);
+    const row = await db.getFirstAsync<any>(
+      "SELECT * FROM attendance WHERE local_id = ?",
+      [localId]
+    );
     return row ? mapRow(row) : null;
   },
 
   async getTodayForEmployee(employeeId: string): Promise<Attendance | null> {
     const db = await getDatabase();
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     const row = await db.getFirstAsync<any>(
-      'SELECT * FROM attendance WHERE employee_id = ? AND date = ? AND is_deleted = 0',
+      "SELECT * FROM attendance WHERE employee_id = ? AND date = ? AND is_deleted = 0",
       [employeeId, today]
     );
     return row ? mapRow(row) : null;
@@ -104,10 +120,13 @@ export const attendanceRepository = {
     const db = await getDatabase();
     const now = nowISO();
 
-    let existing = await db.getFirstAsync<any>('SELECT * FROM attendance WHERE cloud_id = ?', [data.id]);
+    let existing = await db.getFirstAsync<any>(
+      "SELECT * FROM attendance WHERE cloud_id = ?",
+      [data.id]
+    );
     if (!existing) {
       existing = await db.getFirstAsync<any>(
-        'SELECT * FROM attendance WHERE employee_id = ? AND date = ? AND cloud_id IS NULL',
+        "SELECT * FROM attendance WHERE employee_id = ? AND date = ? AND cloud_id IS NULL",
         [data.employee_id, data.date]
       );
     }
@@ -115,20 +134,51 @@ export const attendanceRepository = {
     if (existing) {
       await db.runAsync(
         `UPDATE attendance SET cloud_id = ?, employee_name = ?, clock_in = ?, clock_out = ?, date = ?, notes = ?, status = ?, sync_status = 'synced', last_synced_at = ?, updated_at_local = ? WHERE local_id = ?`,
-        [data.id, data.employee_name, data.clock_in, data.clock_out, data.date, data.notes, data.status, now, now, existing.local_id]
+        [
+          data.id,
+          data.employee_name,
+          data.clock_in,
+          data.clock_out,
+          data.date,
+          data.notes,
+          data.status,
+          now,
+          now,
+          existing.local_id,
+        ]
       );
     } else {
       await db.runAsync(
         `INSERT INTO attendance (local_id, cloud_id, employee_id, employee_name, clock_in, clock_out, date, notes, status, sync_status, created_at_local, updated_at_local, last_synced_at, device_id, created_by, updated_by, is_deleted)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced', ?, ?, ?, ?, ?, ?, 0)`,
-        [generateLocalId(), data.id, data.employee_id, data.employee_name, data.clock_in, data.clock_out, data.date, data.notes, data.status, data.created_at || now, now, now, deviceId, data.created_by || '', data.updated_by || '']
+        [
+          generateLocalId(),
+          data.id,
+          data.employee_id,
+          data.employee_name,
+          data.clock_in,
+          data.clock_out,
+          data.date,
+          data.notes,
+          data.status,
+          data.created_at || now,
+          now,
+          now,
+          deviceId,
+          data.created_by || "",
+          data.updated_by || "",
+        ]
       );
     }
   },
 
-  async getMonthSummary(employeeId: string, year: number, month: number): Promise<{ present: number; late: number; absent: number; leave: number }> {
+  async getMonthSummary(
+    employeeId: string,
+    year: number,
+    month: number
+  ): Promise<{ present: number; late: number; absent: number; leave: number }> {
     const db = await getDatabase();
-    const prefix = `${year}-${String(month).padStart(2, '0')}`;
+    const prefix = `${year}-${String(month).padStart(2, "0")}`;
     const rows = await db.getAllAsync<any>(
       "SELECT status, COUNT(*) as count FROM attendance WHERE employee_id = ? AND date LIKE ? AND is_deleted = 0 GROUP BY status",
       [employeeId, `${prefix}%`]

@@ -1,6 +1,7 @@
 import { getDatabase } from '../database/sqlite/client';
 import { Transaction, TransactionItem, CartItem, SyncStatus } from '../types';
 import { generateLocalId, generateTransactionNumber, nowISO } from '../utils/helpers';
+import { customerRepository } from './customerRepository';
 
 export const transactionRepository = {
   async getAll(limit = 50, offset = 0): Promise<Transaction[]> {
@@ -52,11 +53,23 @@ export const transactionRepository = {
     const tax = data.tax ?? 0;
     const total = subtotal - discount + tax;
 
+    let customerId = data.customer_id ?? null;
+
+    if (data.customer_name?.trim() && data.customer_whatsapp?.trim()) {
+      const customer = await customerRepository.findOrCreate({
+        name: data.customer_name.trim(),
+        whatsapp: data.customer_whatsapp.trim(),
+        device_id: data.device_id,
+        user_id: data.employee_id,
+      });
+      customerId = customer.local_id;
+    }
+
     await db.withExclusiveTransactionAsync(async (txn) => {
       await txn.runAsync(
         `INSERT INTO transactions (local_id, transaction_number, customer_id, customer_name, customer_whatsapp, employee_id, employee_name, subtotal, discount, tax, total, payment_method, notes, transaction_date, sync_status, created_at_local, updated_at_local, device_id, created_by, updated_by, is_deleted)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_upload', ?, ?, ?, ?, ?, 0)`,
-        [txnId, txnNumber, data.customer_id ?? null, data.customer_name ?? null, data.customer_whatsapp ?? null, data.employee_id, data.employee_name, subtotal, discount, tax, total, data.payment_method, data.notes ?? null, now, now, now, data.device_id, data.employee_id, data.employee_id]
+        [txnId, txnNumber, customerId, data.customer_name ?? null, data.customer_whatsapp ?? null, data.employee_id, data.employee_name, subtotal, discount, tax, total, data.payment_method, data.notes ?? null, now, now, now, data.device_id, data.employee_id, data.employee_id]
       );
 
       for (const item of data.items) {
@@ -74,6 +87,10 @@ export const transactionRepository = {
         );
       }
     });
+
+    if (customerId) {
+      await customerRepository.incrementStats(customerId, total);
+    }
 
     return (await this.getById(txnId))!;
   },

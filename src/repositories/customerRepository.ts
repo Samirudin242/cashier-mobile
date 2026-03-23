@@ -20,6 +20,37 @@ export const customerRepository = {
     return row ? mapRow(row) : null;
   },
 
+  async findByWhatsapp(whatsapp: string): Promise<Customer | null> {
+    const digits = whatsapp.replace(/\D/g, '');
+    if (!digits) return null;
+    const db = await getDatabase();
+    const rows = await db.getAllAsync<any>(
+      'SELECT * FROM customers WHERE is_deleted = 0'
+    );
+    for (const row of rows) {
+      const stored = (row.whatsapp || '').replace(/\D/g, '');
+      if (!stored) continue;
+      const a = stored.startsWith('62') ? stored : '62' + stored.replace(/^0?/, '');
+      const b = digits.startsWith('62') ? digits : digits.startsWith('0') ? '62' + digits.slice(1) : '62' + digits;
+      if (a === b) return mapRow(row);
+    }
+    return null;
+  },
+
+  async findOrCreate(data: {
+    name: string;
+    whatsapp: string;
+    device_id: string;
+    user_id: string;
+  }): Promise<Customer> {
+    const existing = await this.findByWhatsapp(data.whatsapp);
+    if (existing) {
+      await this.update(existing.local_id, { name: data.name }, data.user_id);
+      return (await this.getById(existing.local_id))!;
+    }
+    return this.create(data);
+  },
+
   async search(query: string): Promise<Customer[]> {
     const db = await getDatabase();
     const rows = await db.getAllAsync<any>(

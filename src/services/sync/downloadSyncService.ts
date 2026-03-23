@@ -4,7 +4,9 @@ import { transactionRepository } from '../../repositories/transactionRepository'
 import { customerRepository } from '../../repositories/customerRepository';
 import { attendanceRepository } from '../../repositories/attendanceRepository';
 import { categoryRepository } from '../../repositories/categoryRepository';
+import { userRepository } from '../../repositories/userRepository';
 import { syncRepository } from '../../repositories/syncRepository';
+import type { User } from '../../types';
 
 interface DownloadResult {
   downloaded: number;
@@ -17,6 +19,7 @@ export async function downloadSync(deviceId: string): Promise<DownloadResult> {
 
   await downloadCategories(result);
   await downloadProducts(deviceId, result);
+  await downloadUsers(result);
   await downloadTransactions(deviceId, result);
   await downloadTransactionItems(deviceId, result);
   await downloadCustomers(deviceId, result);
@@ -86,6 +89,48 @@ async function downloadProducts(deviceId: string, result: DownloadResult) {
   } catch (err: any) {
     result.failed++;
     result.errors.push(`Unduh produk: ${err.message}`);
+  }
+}
+
+async function downloadUsers(result: DownloadResult) {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name, role, access_code, store_id, is_active, daily_salary, bonus_percent')
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+
+    for (const row of data ?? []) {
+      try {
+        const user: User = {
+          id: row.id,
+          name: row.name,
+          role: row.role,
+          access_code: row.access_code,
+          store_id: row.store_id ?? 'default_store',
+          is_active: !!row.is_active,
+          daily_salary: row.daily_salary ?? 0,
+          bonus_percent: row.bonus_percent ?? 10,
+        };
+        await userRepository.upsertUserToLocal(user);
+        result.downloaded++;
+      } catch (err: any) {
+        result.failed++;
+        result.errors.push(`Pengguna ${row.name}: ${err.message}`);
+      }
+    }
+
+    await syncRepository.logEntry({
+      entity_type: 'users',
+      entity_local_id: 'batch',
+      action: 'download',
+      status: 'success',
+      error_message: null,
+    });
+  } catch (err: any) {
+    result.failed++;
+    result.errors.push(`Unduh pengguna: ${err.message}`);
   }
 }
 

@@ -1,23 +1,33 @@
-import React, { useState, useCallback } from 'react';
-import { View, FlatList, StyleSheet, Alert } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useCallback } from "react";
+import { View, FlatList, StyleSheet, Alert } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Clock,
   LogIn,
   LogOut,
   CheckCircle,
   AlertTriangle,
-} from 'lucide-react-native';
-import { AppScreen, AppCard, AppText, AppButton, AppBadge, AppEmptyState, AppSectionHeader } from '../../components/ui';
-import { attendanceRepository } from '../../repositories/attendanceRepository';
-import { useAuthStore } from '../../stores/authStore';
-import { Attendance } from '../../types';
-import { formatDate, formatTime, todayDateString } from '../../utils/helpers';
-import { colors, spacing, radius } from '../../config/theme';
+} from "lucide-react-native";
+import {
+  AppScreen,
+  AppCard,
+  AppText,
+  AppButton,
+  AppBadge,
+  AppEmptyState,
+  AppSectionHeader,
+} from "../../components/ui";
+import { attendanceRepository } from "../../repositories/attendanceRepository";
+import { useAuthStore } from "../../stores/authStore";
+import { Attendance } from "../../types";
+import { formatDate, formatTime, todayDateString } from "../../utils/helpers";
+import { colors, spacing, radius } from "../../config/theme";
 
 export function AttendanceScreen() {
   const { user, deviceId } = useAuthStore();
-  const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
+  const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(
+    null
+  );
   const [history, setHistory] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -31,14 +41,18 @@ export function AttendanceScreen() {
     setHistory(hist);
   }, [user]);
 
-  useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const handleClockIn = async () => {
     if (!user) return;
     setLoading(true);
     try {
       const hour = new Date().getHours();
-      const status = hour > 9 ? 'late' : 'present';
+      const status = hour > 9 ? "late" : "present";
       await attendanceRepository.clockIn({
         employee_id: user.id,
         employee_name: user.name,
@@ -48,7 +62,7 @@ export function AttendanceScreen() {
       });
       await loadData();
     } catch (err: any) {
-      Alert.alert('Kesalahan', err.message);
+      Alert.alert("Kesalahan", err.message);
     } finally {
       setLoading(false);
     }
@@ -61,7 +75,7 @@ export function AttendanceScreen() {
       await attendanceRepository.clockOut(todayAttendance.local_id);
       await loadData();
     } catch (err: any) {
-      Alert.alert('Kesalahan', err.message);
+      Alert.alert("Kesalahan", err.message);
     } finally {
       setLoading(false);
     }
@@ -77,17 +91,37 @@ export function AttendanceScreen() {
   const renderItem = ({ item }: { item: Attendance }) => (
     <AppCard style={styles.histCard}>
       <View style={styles.histRow}>
-        <View style={[styles.histDot, { backgroundColor: statusColors[item.status] ?? colors.textMuted }]} />
+        <View
+          style={[
+            styles.histDot,
+            { backgroundColor: statusColors[item.status] ?? colors.textMuted },
+          ]}
+        />
         <View style={styles.histInfo}>
           <AppText variant="bodyMedium">{formatDate(item.date)}</AppText>
           <AppText variant="captionMuted">
             {formatTime(item.clock_in)}
-            {item.clock_out ? ` — ${formatTime(item.clock_out)}` : ' (aktif)'}
+            {item.clock_out ? ` — ${formatTime(item.clock_out)}` : " (aktif)"}
           </AppText>
         </View>
         <AppBadge
-          label={({ present: 'Hadir', late: 'Terlambat', absent: 'Absen', leave: 'Cuti' } as Record<string, string>)[item.status] ?? item.status}
-          variant={item.status === 'present' ? 'success' : item.status === 'late' ? 'warning' : 'error'}
+          label={
+            (
+              {
+                present: "Hadir",
+                late: "Terlambat",
+                absent: "Absen",
+                leave: "Cuti",
+              } as Record<string, string>
+            )[item.status] ?? item.status
+          }
+          variant={
+            item.status === "present"
+              ? "success"
+              : item.status === "late"
+              ? "warning"
+              : "error"
+          }
         />
       </View>
     </AppCard>
@@ -95,12 +129,16 @@ export function AttendanceScreen() {
 
   return (
     <AppScreen scroll>
-      <AppText variant="title" style={styles.pageTitle}>Absensi</AppText>
+      <AppText variant="title" style={styles.pageTitle}>
+        Absensi
+      </AppText>
 
       <AppCard style={styles.todayCard}>
         <View style={styles.todayHeader}>
           <Clock size={20} color={colors.primary} />
-          <AppText variant="sectionTitle" style={styles.todayTitle}>Hari Ini</AppText>
+          <AppText variant="sectionTitle" style={styles.todayTitle}>
+            Hari Ini
+          </AppText>
         </View>
 
         {todayAttendance ? (
@@ -182,21 +220,21 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   todayHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: spacing.md,
   },
   todayTitle: {
     marginLeft: spacing.sm,
   },
   todayDetail: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   todayTimeBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
   todayTimeText: {
@@ -212,8 +250,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   histRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   histDot: {
     width: 10,

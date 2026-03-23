@@ -4,6 +4,7 @@ import { transactionRepository } from '../../repositories/transactionRepository'
 import { customerRepository } from '../../repositories/customerRepository';
 import { attendanceRepository } from '../../repositories/attendanceRepository';
 import { categoryRepository } from '../../repositories/categoryRepository';
+import { userRepository } from '../../repositories/userRepository';
 import { syncRepository } from '../../repositories/syncRepository';
 
 interface SyncResult {
@@ -17,6 +18,7 @@ export async function uploadSync(): Promise<SyncResult> {
 
   await uploadCategories(result);
   await uploadProducts(result);
+  await uploadUsers(result);
   await uploadTransactions(result);
   await uploadCustomers(result);
   await uploadAttendance(result);
@@ -132,6 +134,33 @@ async function uploadProducts(result: SyncResult) {
       result.failed++;
       result.errors.push(`Produk ${product.name}: ${msg}`);
     }
+  }
+}
+
+async function uploadUsers(result: SyncResult) {
+  try {
+    const employees = await userRepository.getEmployees();
+    for (const user of employees) {
+      try {
+        await userRepository.uploadUserToSupabase(user);
+        result.uploaded++;
+      } catch (err: any) {
+        result.failed++;
+        result.errors.push(`Karyawan ${user.name}: ${err?.message || 'Gagal unggah'}`);
+      }
+    }
+    if (employees.length > 0) {
+      await syncRepository.logEntry({
+        entity_type: 'users',
+        entity_local_id: 'batch',
+        action: 'upload',
+        status: 'success',
+        error_message: null,
+      });
+    }
+  } catch (err: any) {
+    result.failed++;
+    result.errors.push(`Karyawan: ${err?.message || 'Kesalahan tidak diketahui'}`);
   }
 }
 

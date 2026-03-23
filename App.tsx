@@ -18,8 +18,8 @@ export default function App() {
     })();
   }, []);
 
-  const showLoader = !dbReady || isLoading || isAuthBusy;
-  const loaderMessage = isAuthBusy ? 'Memproses...' : 'Memuat Kasir POS...';
+  const showLoader = !dbReady || isLoading;
+  const loaderMessage = 'Memuat Kasir POS...';
 
   if (showLoader) {
     return (
