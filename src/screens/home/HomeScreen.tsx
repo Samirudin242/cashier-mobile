@@ -25,6 +25,7 @@ import { formatCurrency } from "../../utils/helpers";
 
 export function HomeScreen() {
   const user = useAuthStore((s) => s.user);
+  const refreshSessionUser = useAuthStore((s) => s.refreshSessionUser);
   const navigation = useNavigation<any>();
   const [stats, setStats] = useState({
     todayTotal: 0,
@@ -48,13 +49,12 @@ export function HomeScreen() {
   }, []);
 
   useEffect(() => {
-    loadStats();
-  }, [loadStats]);
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener("focus", loadStats);
+    const unsubscribe = navigation.addListener("focus", () => {
+      loadStats();
+      refreshSessionUser();
+    });
     return unsubscribe;
-  }, [navigation, loadStats]);
+  }, [navigation, loadStats, refreshSessionUser]);
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -100,9 +100,12 @@ export function HomeScreen() {
       {stats.pendingSync > 0 && (
         <Pressable
           onPress={() =>
-            navigation.navigate(user?.role === "owner" ? "SyncStack" : "SyncTab", {
-              screen: "PendingSyncDetail",
-            })
+            navigation.navigate(
+              user?.role === "owner" ? "SyncStack" : "SyncTab",
+              {
+                screen: "PendingSyncDetail",
+              }
+            )
           }
         >
           <AppCard style={styles.syncBanner}>

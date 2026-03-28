@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, FlatList, StyleSheet, Alert, Pressable } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import {
   Calendar,
   ChevronLeft,
@@ -81,7 +81,11 @@ export function EmployeeSalaryScreen() {
     });
   }, [employee, year, month]);
 
-  useEffect(() => { loadEmployee(); }, [loadEmployee]);
+  useFocusEffect(
+    useCallback(() => {
+      loadEmployee();
+    }, [loadEmployee])
+  );
   useEffect(() => { loadSalary(); }, [loadSalary]);
 
   const prevMonth = () => {
@@ -264,7 +268,7 @@ export function EmployeeSalaryScreen() {
                       • {item.productName} (×{item.quantity})
                     </AppText>
                     <AppText variant="caption" style={styles.itemBonus}>
-                      {formatCurrency(item.handlingFee)} × {employee.bonus_percent}% = {formatCurrency(item.bonus)}
+                      {formatCurrency(item.baseForBonus)} × {employee.bonus_percent}% = {formatCurrency(item.bonus)}
                     </AppText>
                   </View>
                 ))}

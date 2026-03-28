@@ -7,23 +7,30 @@ import { categoryRepository } from '../../repositories/categoryRepository';
 import { userRepository } from '../../repositories/userRepository';
 import { syncRepository } from '../../repositories/syncRepository';
 import type { User } from '../../types';
+import type { UploadEntityType } from './uploadSyncService';
 
-interface DownloadResult {
+export interface DownloadResult {
   downloaded: number;
   failed: number;
   errors: string[];
 }
 
-export async function downloadSync(deviceId: string): Promise<DownloadResult> {
+export async function downloadSync(
+  deviceId: string,
+  types: UploadEntityType[]
+): Promise<DownloadResult> {
   const result: DownloadResult = { downloaded: 0, failed: 0, errors: [] };
+  const include = (t: UploadEntityType) => types.includes(t);
 
-  await downloadCategories(result);
-  await downloadProducts(deviceId, result);
-  await downloadUsers(result);
-  await downloadTransactions(deviceId, result);
-  await downloadTransactionItems(deviceId, result);
-  await downloadCustomers(deviceId, result);
-  await downloadAttendance(deviceId, result);
+  if (include('categories')) await downloadCategories(result);
+  if (include('products')) await downloadProducts(deviceId, result);
+  if (include('users')) await downloadUsers(result);
+  if (include('transactions')) {
+    await downloadTransactions(deviceId, result);
+    await downloadTransactionItems(deviceId, result);
+  }
+  if (include('customers')) await downloadCustomers(deviceId, result);
+  if (include('attendance')) await downloadAttendance(deviceId, result);
 
   return result;
 }

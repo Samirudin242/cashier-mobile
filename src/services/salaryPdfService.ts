@@ -1,6 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { EmployeeSalary } from '../types';
 import { formatCurrency } from '../utils/helpers';
 
@@ -41,7 +41,7 @@ export async function generateSalaryPdf(salary: EmployeeSalary): Promise<void> {
             `<tr style="background:#FAFAFA;">
               <td></td>
               <td colspan="2" style="padding-left:20px;">• ${item.productName} (×${item.quantity})</td>
-              <td>${formatCurrency(item.handlingFee)}</td>
+              <td>${formatCurrency(item.baseForBonus)}</td>
               <td></td>
               <td>${formatCurrency(item.bonus)}</td>
             </tr>`
@@ -106,9 +106,9 @@ export async function generateSalaryPdf(salary: EmployeeSalary): Promise<void> {
     </table>
 
     <h2>Detail Bonus Penjualan (${bonusPct}%)</h2>
-    <p style="color:#666;font-size:11px;margin-bottom:8px;">Rumus per item: Biaya Penanganan × ${bonusPct}% = Bonus. Total bonus = jumlah bonus tiap item.</p>
+    <p style="color:#666;font-size:11px;margin-bottom:8px;">Rumus per item: (Harga − Penanganan) × ${bonusPct}% = Bonus. Total bonus = jumlah bonus tiap item.</p>
     <table>
-      <thead><tr><th>#</th><th>Tanggal</th><th>Transaksi</th><th>Penanganan</th><th></th><th>Bonus</th></tr></thead>
+      <thead><tr><th>#</th><th>Tanggal</th><th>Transaksi</th><th>Net (Harga − Penanganan)</th><th></th><th>Bonus</th></tr></thead>
       <tbody>${bonusRows || '<tr><td colspan="6" style="text-align:center;color:#aaa;">Tidak ada data</td></tr>'}</tbody>
     </table>
 

@@ -20,21 +20,24 @@ import { colors, spacing, radius } from '../../config/theme';
 
 export function ProfileScreen() {
   const { user, logout } = useAuthStore();
+  const refreshSessionUser = useAuthStore((s) => s.refreshSessionUser);
   const [todayStats, setTodayStats] = useState({ count: 0, total: 0 });
   const [attendanceSummary, setAttendanceSummary] = useState({ present: 0, late: 0, absent: 0, leave: 0 });
 
   useFocusEffect(
     useCallback(() => {
-      if (!user) return;
       (async () => {
+        await refreshSessionUser();
+        const u = useAuthStore.getState().user;
+        if (!u) return;
         const today = await transactionRepository.getTodayTotal();
         setTodayStats(today);
 
         const now = new Date();
-        const summary = await attendanceRepository.getMonthSummary(user.id, now.getFullYear(), now.getMonth() + 1);
+        const summary = await attendanceRepository.getMonthSummary(u.id, now.getFullYear(), now.getMonth() + 1);
         setAttendanceSummary(summary);
       })();
-    }, [user])
+    }, [refreshSessionUser])
   );
 
   const handleClearData = () => {

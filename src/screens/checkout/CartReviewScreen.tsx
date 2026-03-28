@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   FlatList,
@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useOptionalBottomTabBarHeight } from "../../hooks/useOptionalBottomTabBarHeight";
 import {
   Minus,
@@ -66,14 +66,22 @@ export function CartReviewScreen() {
   const [employees, setEmployees] = useState<User[]>([]);
   const [showEmployeePicker, setShowEmployeePicker] = useState(false);
 
-  useEffect(() => {
-    userRepository.getEmployees().then((emps) => {
-      setEmployees(emps);
-      if (!handlerEmployeeId && emps.length > 0) {
-        setHandlerEmployee(emps[0].id, emps[0].name);
-      }
-    });
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      userRepository.getEmployees().then((emps) => {
+        setEmployees(emps);
+        if (emps.length === 0) return;
+        const { handlerEmployeeId, setHandlerEmployee } = useCartStore.getState();
+        if (handlerEmployeeId) {
+          const match = emps.find((e) => e.id === handlerEmployeeId);
+          if (match) setHandlerEmployee(match.id, match.name);
+          else setHandlerEmployee(emps[0].id, emps[0].name);
+        } else {
+          setHandlerEmployee(emps[0].id, emps[0].name);
+        }
+      });
+    }, [])
+  );
 
   const subtotal = getSubtotal();
   const total = getTotal();

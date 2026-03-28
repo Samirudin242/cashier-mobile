@@ -6,7 +6,11 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "android:all": "bash scripts/android-dev-all.sh",
+    "android:emu1": "bash scripts/android-run-emu.sh emulator-5554",
+    "android:emu2": "bash scripts/android-run-emu.sh emulator-5556",
+    "android:emu3": "bash scripts/android-run-emu.sh emulator-5558"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -15,6 +19,7 @@
     "@react-navigation/native-stack": "^7.14.5",
     "@supabase/supabase-js": "^2.99.2",
     "expo": "^54",
+    "expo-constants": "~18.0.13",
     "expo-crypto": "~15.0.8",
     "expo-file-system": "~19.0.21",
     "expo-print": "~15.0.8",

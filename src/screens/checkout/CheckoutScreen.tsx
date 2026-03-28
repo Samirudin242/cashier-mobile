@@ -1,9 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, FlatList, StyleSheet, Pressable, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { useOptionalBottomTabBarHeight } from '../../hooks/useOptionalBottomTabBarHeight';
-import { ShoppingCart, Search, Package } from 'lucide-react-native';
+import { ShoppingCart, Search, Package, ChevronRight, Minus, Plus } from 'lucide-react-native';
 import { AppScreen, AppText, AppInput, AppEmptyState } from '../../components/ui';
 import { productRepository } from '../../repositories/productRepository';
 import { categoryRepository } from '../../repositories/categoryRepository';
@@ -14,45 +12,80 @@ import { colors, spacing, radius, shadows } from '../../config/theme';
 
 const ALL_CATEGORY = 'Semua';
 
-/** Fixed height for the floating cart bar (icon row + padding) */
-const CART_BAR_HEIGHT = 56;
-/** Tab bar content height (icons + labels) from AppNavigator */
-const TAB_BAR_CONTENT_HEIGHT = 58;
+/** Min height of cart row (icon + text) inside the pill */
+const CART_BAR_ROW_MIN_HEIGHT = 44;
+/**
+ * Total stacked height of the cart pill (paddingVertical × 2 + row).
+ * Tab scene bottom already sits flush with the top of the tab bar (RN bottom-tabs column layout),
+ * so the pill uses bottom: 0 — do not add tabBarHeight again.
+ */
+const CART_BAR_TOTAL_HEIGHT =
+  spacing.sm * 2 + CART_BAR_ROW_MIN_HEIGHT + 4;
 
-const ProductTile = React.memo(({ item, qty, onPress }: { item: Product; qty: number; onPress: () => void }) => (
-  <Pressable
-    style={({ pressed }) => [styles.productCard, pressed && styles.productPressed]}
-    onPress={onPress}
-  >
-    <View style={styles.productIconWrap}>
-      <Package size={18} color={colors.primary} />
+const ProductTile = React.memo(
+  ({
+    item,
+    qty,
+    onIncrement,
+    onDecrement,
+  }: {
+    item: Product;
+    qty: number;
+    onIncrement: () => void;
+    onDecrement: () => void;
+  }) => (
+    <View style={styles.productCard}>
+      <Pressable
+        style={({ pressed }) => [styles.productMain, pressed && styles.productPressed]}
+        onPress={onIncrement}
+      >
+        <View style={styles.productIconWrap}>
+          <Package size={18} color={colors.primary} />
+        </View>
+        <View style={styles.productInfo}>
+          <AppText variant="bodyMedium" numberOfLines={1}>{item.name}</AppText>
+          <AppText variant="caption" style={{ color: colors.primary }}>
+            {formatCurrency(item.price)}
+          </AppText>
+        </View>
+        <View style={styles.productStock}>
+          <AppText variant="captionMuted">Stok: {item.stock}</AppText>
+        </View>
+      </Pressable>
+      {qty > 0 && (
+        <View style={styles.qtyStepper}>
+          <Pressable
+            style={({ pressed }) => [styles.qtyStepBtn, pressed && styles.qtyStepBtnPressed]}
+            onPress={onDecrement}
+            hitSlop={6}
+            accessibilityLabel="Kurangi jumlah"
+          >
+            <Minus size={18} color={colors.primary} strokeWidth={2.5} />
+          </Pressable>
+          <AppText variant="bodySemibold" style={styles.qtyStepValue}>
+            {qty}
+          </AppText>
+          <Pressable
+            style={({ pressed }) => [styles.qtyStepBtn, pressed && styles.qtyStepBtnPressed]}
+            onPress={onIncrement}
+            hitSlop={6}
+            accessibilityLabel="Tambah jumlah"
+          >
+            <Plus size={18} color={colors.primary} strokeWidth={2.5} />
+          </Pressable>
+        </View>
+      )}
     </View>
-    <View style={styles.productInfo}>
-      <AppText variant="bodyMedium" numberOfLines={1}>{item.name}</AppText>
-      <AppText variant="caption" style={{ color: colors.primary }}>
-        {formatCurrency(item.price)}
-      </AppText>
-    </View>
-    <View style={styles.productStock}>
-      <AppText variant="captionMuted">Stok: {item.stock}</AppText>
-    </View>
-    {qty > 0 && (
-      <View style={styles.qtyBadge}>
-        <AppText variant="caption" style={styles.qtyText}>{qty}</AppText>
-      </View>
-    )}
-  </Pressable>
-));
+  )
+);
 
 export function CheckoutScreen() {
-  const insets = useSafeAreaInsets();
-  const tabBarHeight = useOptionalBottomTabBarHeight();
   const navigation = useNavigation<any>();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY);
-  const { items, addItem, getItemCount, getTotal } = useCartStore();
+  const { items, addItem, updateQuantity, removeItem, getItemCount, getTotal } = useCartStore();
   const itemCount = getItemCount();
   const total = getTotal();
 
@@ -92,23 +125,33 @@ export function CheckoutScreen() {
     return m;
   }, [items]);
 
-  const renderProduct = useCallback(({ item }: { item: Product }) => (
-    <ProductTile
-      item={item}
-      qty={cartMap.get(item.local_id) ?? 0}
-      onPress={() => addItem(item)}
-    />
-  ), [cartMap, addItem]);
+  const handleDecrement = useCallback(
+    (product: Product) => {
+      const q = cartMap.get(product.local_id) ?? 0;
+      if (q <= 1) removeItem(product.local_id);
+      else updateQuantity(product.local_id, q - 1);
+    },
+    [cartMap, removeItem, updateQuantity]
+  );
 
-  const effectiveTabBarHeight =
-    tabBarHeight > 0 ? tabBarHeight : TAB_BAR_CONTENT_HEIGHT + Math.max(insets.bottom, 10);
+  const renderProduct = useCallback(
+    ({ item }: { item: Product }) => (
+      <ProductTile
+        item={item}
+        qty={cartMap.get(item.local_id) ?? 0}
+        onIncrement={() => addItem(item)}
+        onDecrement={() => handleDecrement(item)}
+      />
+    ),
+    [cartMap, addItem, handleDecrement]
+  );
 
   const listBottomPad = useMemo(() => {
     if (itemCount > 0) {
-      return effectiveTabBarHeight + CART_BAR_HEIGHT + spacing.xl + spacing.sm;
+      return CART_BAR_TOTAL_HEIGHT + spacing.base;
     }
-    return spacing.xxxl + effectiveTabBarHeight;
-  }, [itemCount, effectiveTabBarHeight]);
+    return spacing.xxxl;
+  }, [itemCount]);
 
   return (
     <View style={styles.container}>
@@ -165,26 +208,33 @@ export function CheckoutScreen() {
 
       {itemCount > 0 && (
         <Pressable
-          style={[
-            styles.cartBar,
-            {
-              bottom: effectiveTabBarHeight + spacing.md,
-              left: spacing.base,
-              right: spacing.base,
-            },
-          ]}
+          style={[styles.cartBar, { bottom: 0, left: spacing.base, right: spacing.base }]}
           onPress={() => navigation.navigate('CartReview')}
         >
-          <View style={styles.cartLeft}>
-            <ShoppingCart size={20} color={colors.textInverse} />
-            <View style={styles.cartCount}>
-              <AppText variant="caption" style={styles.cartCountText}>{itemCount}</AppText>
+          <View style={styles.cartBarRow}>
+            <View style={styles.cartBarLeading}>
+              <View style={styles.cartIconGroup}>
+                <ShoppingCart size={20} color={colors.textInverse} />
+                <View style={styles.cartCount}>
+                  <AppText variant="caption" style={styles.cartCountText}>{itemCount}</AppText>
+                </View>
+              </View>
+              <AppText
+                variant="bodySemibold"
+                style={styles.cartTotal}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {formatCurrency(total)}
+              </AppText>
+            </View>
+            <View style={styles.cartBarTrailing}>
+              <AppText variant="bodyMedium" style={styles.cartAction} numberOfLines={1}>
+                Lihat Keranjang
+              </AppText>
+              <ChevronRight size={20} color={colors.textInverse} strokeWidth={2.5} />
             </View>
           </View>
-          <AppText variant="bodySemibold" style={styles.cartTotal}>
-            {formatCurrency(total)}
-          </AppText>
-          <AppText variant="bodyMedium" style={styles.cartAction}>Lihat Keranjang</AppText>
         </Pressable>
       )}
     </View>
@@ -245,12 +295,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: radius.lg,
     padding: spacing.md,
-    position: 'relative',
     ...shadows.sm,
+  },
+  productMain: {
+    flexGrow: 1,
   },
   productPressed: {
     opacity: 0.85,
-    transform: [{ scale: 0.97 }],
+    transform: [{ scale: 0.98 }],
   },
   productIconWrap: {
     width: 36,
@@ -267,46 +319,77 @@ const styles = StyleSheet.create({
   productStock: {
     marginTop: spacing.xs,
   },
-  qtyBadge: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qtyText: {
-    color: colors.textInverse,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  cartBar: {
-    position: 'absolute',
+  qtyStepper: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: CART_BAR_HEIGHT,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  qtyStepBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qtyStepBtnPressed: {
+    opacity: 0.75,
+  },
+  qtyStepValue: {
+    fontSize: 16,
+    color: colors.text,
+    minWidth: 28,
+    textAlign: 'center',
+  },
+  cartBar: {
+    position: 'absolute',
     backgroundColor: colors.primary,
-    borderRadius: radius.xl,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     ...shadows.lg,
   },
-  cartLeft: {
+  cartBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    minHeight: CART_BAR_ROW_MIN_HEIGHT,
+  },
+  cartBarLeading: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+  },
+  cartIconGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  cartBarTrailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+    gap: 2,
+    paddingLeft: spacing.xs,
   },
   cartCount: {
     backgroundColor: colors.textInverse,
-    width: 22,
+    minWidth: 22,
     height: 22,
+    paddingHorizontal: 5,
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: spacing.sm,
+    marginLeft: 6,
   },
   cartCountText: {
     color: colors.primary,
@@ -315,10 +398,13 @@ const styles = StyleSheet.create({
   },
   cartTotal: {
     flex: 1,
+    marginLeft: spacing.md,
     color: colors.textInverse,
-    textAlign: 'center',
+    fontSize: 16,
   },
   cartAction: {
     color: colors.textInverse,
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

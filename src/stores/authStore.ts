@@ -19,6 +19,8 @@ interface AuthState {
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   isOwner: () => boolean;
+  /** Reload current user from local DB (e.g. after owner updates employee / bonus %). */
+  refreshSessionUser: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -139,4 +141,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   isOwner: () => get().user?.role === "owner",
+
+  refreshSessionUser: async () => {
+    const { user } = get();
+    if (!user) return;
+    try {
+      const fresh = await userRepository.findByAccessCode(user.access_code);
+      if (fresh) {
+        await SecureStore.setItemAsync(AUTH_KEY, JSON.stringify(fresh));
+        set({ user: fresh });
+      }
+    } catch (e) {
+      console.warn("[auth] refreshSessionUser", e);
+    }
+  },
 }));

@@ -49,6 +49,30 @@ export function todayDateString(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+/** Inclusive start and exclusive end of the calendar day in local time, as ISO strings (for SQL comparisons on UTC timestamps). */
+export function getLocalDayRangeISO(date: Date): { startISO: string; endISO: string } {
+  const y = date.getFullYear();
+  const m = date.getMonth();
+  const d = date.getDate();
+  const start = new Date(y, m, d, 0, 0, 0, 0);
+  const end = new Date(y, m, d + 1, 0, 0, 0, 0);
+  return { startISO: start.toISOString(), endISO: end.toISOString() };
+}
+
+export function isSameLocalCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+export function addLocalCalendarDays(date: Date, deltaDays: number): Date {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  d.setDate(d.getDate() + deltaDays);
+  return d;
+}
+
 /**
  * Normalizes Indonesian phone input to WhatsApp international format (62xxxxxxxxxxx).
  * Accepts e.g. 082347497133, +62 823-4749-7133, 6282347497133

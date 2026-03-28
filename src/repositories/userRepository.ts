@@ -225,6 +225,10 @@ export const userRepository = {
     );
   },
 
+  /**
+   * Get bonus-earning transactions for an employee in a date range.
+   * Bonus per item: (product_price - handling_fee) × quantity × bonus_percent%
+   */
   async getEmployeeTransactionBonus(
     employeeId: string,
     startDate: string,
@@ -233,10 +237,9 @@ export const userRepository = {
   ) {
     const db = await getDatabase();
     const pct = bonusPercent / 100;
-    // Use date() for robust filtering across ISO/format variations (e.g. from Supabase sync)
     const rows = await db.getAllAsync<any>(
       `SELECT t.local_id, t.transaction_number, t.transaction_date,
-              ti.product_name, ti.handling_fee, ti.quantity, ti.subtotal
+              ti.product_name, ti.product_price, ti.handling_fee, ti.quantity, ti.subtotal
        FROM transactions t
        JOIN transaction_items ti ON ti.transaction_local_id = t.local_id
        WHERE t.employee_id = ? AND date(t.transaction_date) >= date(?) AND date(t.transaction_date) <= date(?) AND t.is_deleted = 0
@@ -244,23 +247,25 @@ export const userRepository = {
       [employeeId, startDate, endDate]
     );
 
-    // Group by transaction, compute per-item bonus (handling_fee * quantity * pct)
     const txMap = new Map<
       string,
       {
         transactionNumber: string;
         date: string;
-        items: any[];
+        items: { productName: string; baseForBonus: number; quantity: number; bonus: number }[];
         itemsTotal: number;
         handlingTotal: number;
       }
     >();
     for (const r of rows) {
       const tid = r.local_id;
+      const price = (r.product_price as number) ?? 0;
       const handlingFee = (r.handling_fee as number) ?? 0;
       const qty = (r.quantity as number) ?? 1;
+      const netPerUnit = Math.max(0, price - handlingFee);
+      const baseForBonus = netPerUnit * qty;
+      const itemBonus = baseForBonus * pct;
       const handlingForItem = handlingFee * qty;
-      const itemBonus = handlingForItem * pct;
 
       if (!txMap.has(tid)) {
         txMap.set(tid, {
@@ -274,7 +279,7 @@ export const userRepository = {
       const tx = txMap.get(tid)!;
       tx.items.push({
         productName: r.product_name,
-        handlingFee: handlingForItem,
+        baseForBonus,
         quantity: qty,
         bonus: itemBonus,
       });

@@ -6,22 +6,43 @@ import { attendanceRepository } from '../../repositories/attendanceRepository';
 import { categoryRepository } from '../../repositories/categoryRepository';
 import { userRepository } from '../../repositories/userRepository';
 import { syncRepository } from '../../repositories/syncRepository';
+import { isGoogleSheetsConfigured } from '../../config/googleSheets';
+import { appendRowsToGoogleSheet, type SheetRow } from '../googleSheetsAppendService';
 
-interface SyncResult {
+export interface SyncResult {
   uploaded: number;
   failed: number;
   errors: string[];
 }
 
-export async function uploadSync(): Promise<SyncResult> {
-  const result: SyncResult = { uploaded: 0, failed: 0, errors: [] };
+export type UploadEntityType =
+  | 'categories'
+  | 'products'
+  | 'users'
+  | 'transactions'
+  | 'customers'
+  | 'attendance';
 
-  await uploadCategories(result);
-  await uploadProducts(result);
-  await uploadUsers(result);
-  await uploadTransactions(result);
-  await uploadCustomers(result);
-  await uploadAttendance(result);
+/** Ordered list for UI (same order as a full sync: categories before products, etc.). */
+export const UPLOAD_TYPE_OPTIONS: { id: UploadEntityType; label: string }[] = [
+  { id: 'categories', label: 'Kategori' },
+  { id: 'products', label: 'Produk' },
+  { id: 'users', label: 'Karyawan' },
+  { id: 'transactions', label: 'Transaksi' },
+  { id: 'customers', label: 'Pelanggan' },
+  { id: 'attendance', label: 'Absensi' },
+];
+
+export async function uploadSync(types: UploadEntityType[]): Promise<SyncResult> {
+  const result: SyncResult = { uploaded: 0, failed: 0, errors: [] };
+  const include = (t: UploadEntityType) => types.includes(t);
+
+  if (include('categories')) await uploadCategories(result);
+  if (include('products')) await uploadProducts(result);
+  if (include('users')) await uploadUsers(result);
+  if (include('transactions')) await uploadTransactions(result);
+  if (include('customers')) await uploadCustomers(result);
+  if (include('attendance')) await uploadAttendance(result);
 
   return result;
 }
@@ -164,8 +185,21 @@ async function uploadUsers(result: SyncResult) {
   }
 }
 
+async function appendSheetRowsSafe(rows: SheetRow[], result: SyncResult, label: string) {
+  if (rows.length === 0) return;
+  if (!isGoogleSheetsConfigured()) return;
+  try {
+    await appendRowsToGoogleSheet(rows);
+  } catch (err: any) {
+    console.warn('[Google Sheets]', err);
+    const msg = err?.message || 'Gagal mengirim ke Google Sheet';
+    result.errors.push(`${label}: ${msg}`);
+  }
+}
+
 async function uploadTransactions(result: SyncResult) {
   const pending = await transactionRepository.getPendingSync();
+  const sheetRows: SheetRow[] = [];
 
   for (const txn of pending) {
     if (txn.sync_status === 'pending_delete') continue;
@@ -214,6 +248,19 @@ async function uploadTransactions(result: SyncResult) {
         error_message: null,
       });
       result.uploaded++;
+
+      const items = await transactionRepository.getItems(txn.local_id);
+      const name = txn.customer_name?.trim() ?? '';
+      const wa = txn.customer_whatsapp?.trim() ?? '';
+      const num = txn.transaction_number;
+      for (const item of items) {
+        sheetRows.push([
+          name || '-',
+          wa || '-',
+          num,
+          `${item.product_name} × ${item.quantity}`,
+        ]);
+      }
     } catch (err: any) {
       const msg = err?.message || 'Kesalahan tidak diketahui';
       await transactionRepository.markFailed(txn.local_id, msg);
@@ -228,6 +275,8 @@ async function uploadTransactions(result: SyncResult) {
       result.errors.push(`Transaksi ${txn.transaction_number}: ${msg}`);
     }
   }
+
+  await appendSheetRowsSafe(sheetRows, result, 'Google Sheet (transaksi)');
 }
 
 async function uploadTransactionItems(transactionLocalId: string, cloudTransactionId: string) {
@@ -254,6 +303,7 @@ async function uploadTransactionItems(transactionLocalId: string, cloudTransacti
 
 async function uploadCustomers(result: SyncResult) {
   const pending = await customerRepository.getPendingSync();
+  const sheetRows: SheetRow[] = [];
 
   for (const customer of pending) {
     try {
@@ -292,6 +342,14 @@ async function uploadCustomers(result: SyncResult) {
         error_message: null,
       });
       result.uploaded++;
+      if (!customer.is_deleted) {
+        sheetRows.push([
+          customer.name,
+          customer.whatsapp ?? '',
+          customer.email ?? '',
+          String(customer.total_spent ?? 0),
+        ]);
+      }
     } catch (err: any) {
       const msg = err?.message || 'Kesalahan tidak diketahui';
       await customerRepository.markFailed(customer.local_id, msg);
@@ -306,6 +364,8 @@ async function uploadCustomers(result: SyncResult) {
       result.errors.push(`Pelanggan ${customer.name}: ${msg}`);
     }
   }
+
+  await appendSheetRowsSafe(sheetRows, result, 'Google Sheet (pelanggan)');
 }
 
 async function uploadAttendance(result: SyncResult) {

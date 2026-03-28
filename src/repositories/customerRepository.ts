@@ -99,11 +99,18 @@ export const customerRepository = {
     return this.getById(localId);
   },
 
-  async incrementStats(localId: string, amount: number): Promise<void> {
+  async incrementStats(localId: string, amount: number, updatedBy: string): Promise<void> {
     const db = await getDatabase();
+    const now = nowISO();
     await db.runAsync(
-      'UPDATE customers SET total_transactions = total_transactions + 1, total_spent = total_spent + ? WHERE local_id = ?',
-      [amount, localId]
+      `UPDATE customers SET
+        total_transactions = total_transactions + 1,
+        total_spent = total_spent + ?,
+        updated_at_local = ?,
+        updated_by = ?,
+        sync_status = CASE WHEN sync_status = 'pending_delete' THEN sync_status ELSE 'pending_upload' END
+      WHERE local_id = ?`,
+      [amount, now, updatedBy, localId]
     );
   },
 

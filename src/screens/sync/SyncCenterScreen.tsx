@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, Alert, Pressable } from 'react-native';
+import { View, StyleSheet, Alert, Pressable, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   Upload,
@@ -7,21 +7,30 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
-  CloudOff,
   RefreshCw,
   Trash2,
+  Check,
+  Square,
 } from 'lucide-react-native';
-import { AppScreen, AppCard, AppText, AppButton, AppBadge, AppSectionHeader } from '../../components/ui';
+import { AppScreen, AppCard, AppText, AppButton, AppBadge, AppSectionHeader, AppModal } from '../../components/ui';
 import { syncRepository } from '../../repositories/syncRepository';
-import { uploadSync } from '../../services/sync/uploadSyncService';
+import {
+  uploadSync,
+  UPLOAD_TYPE_OPTIONS,
+  type UploadEntityType,
+} from '../../services/sync/uploadSyncService';
 import { downloadSync } from '../../services/sync/downloadSyncService';
 import { useAuthStore } from '../../stores/authStore';
 import { SyncSummary, SyncLogEntry } from '../../types';
 import { formatDateTime } from '../../utils/helpers';
 import { colors, spacing, radius } from '../../config/theme';
 
+function emptyTypeSelection(): Record<UploadEntityType, boolean> {
+  return Object.fromEntries(UPLOAD_TYPE_OPTIONS.map((o) => [o.id, false])) as Record<UploadEntityType, boolean>;
+}
+
 export function SyncCenterScreen() {
-  const { deviceId, user } = useAuthStore();
+  const { deviceId } = useAuthStore();
   const [summary, setSummary] = useState<SyncSummary>({
     lastSyncTime: null,
     pendingUpload: 0,
@@ -31,6 +40,10 @@ export function SyncCenterScreen() {
   const [logs, setLogs] = useState<SyncLogEntry[]>([]);
   const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [uploadPickerOpen, setUploadPickerOpen] = useState(false);
+  const [uploadSelection, setUploadSelection] = useState<Record<UploadEntityType, boolean>>(() => emptyTypeSelection());
+  const [downloadPickerOpen, setDownloadPickerOpen] = useState(false);
+  const [downloadSelection, setDownloadSelection] = useState<Record<UploadEntityType, boolean>>(() => emptyTypeSelection());
 
   const loadData = useCallback(async () => {
     const [s, l] = await Promise.all([
@@ -47,15 +60,36 @@ export function SyncCenterScreen() {
     }, [loadData])
   );
 
-  const handleUpload = async () => {
+  const openUploadPicker = () => {
+    setUploadSelection(emptyTypeSelection());
+    setUploadPickerOpen(true);
+  };
+
+  const toggleUploadType = (id: UploadEntityType) => {
+    setUploadSelection((s) => ({ ...s, [id]: !s[id] }));
+  };
+
+  const handleConfirmUpload = async () => {
+    const types = UPLOAD_TYPE_OPTIONS.filter((o) => uploadSelection[o.id]).map((o) => o.id);
+    if (types.length === 0) {
+      Alert.alert('Pilih Data', 'Pilih minimal satu jenis data untuk diunggah.');
+      return;
+    }
+    setUploadPickerOpen(false);
     setUploading(true);
     try {
-      const result = await uploadSync();
+      const result = await uploadSync(types);
       await loadData();
+      const errLines = result.errors.slice(0, 5).join('\n');
       if (result.failed > 0) {
         Alert.alert(
           'Sinkronisasi Sebagian',
-          `Diunggah: ${result.uploaded}\nGagal: ${result.failed}\n\n${result.errors.slice(0, 3).join('\n')}`
+          `Diunggah: ${result.uploaded}\nGagal: ${result.failed}${errLines ? `\n\n${errLines}` : ''}`
+        );
+      } else if (result.errors.length > 0) {
+        Alert.alert(
+          'Sinkronisasi Selesai — peringatan',
+          `Diunggah: ${result.uploaded}\n\n${errLines}`
         );
       } else {
         Alert.alert('Sinkronisasi Selesai', `${result.uploaded} data berhasil diunggah.`);
@@ -67,10 +101,25 @@ export function SyncCenterScreen() {
     }
   };
 
-  const handleDownload = async () => {
+  const openDownloadPicker = () => {
+    setDownloadSelection(emptyTypeSelection());
+    setDownloadPickerOpen(true);
+  };
+
+  const toggleDownloadType = (id: UploadEntityType) => {
+    setDownloadSelection((s) => ({ ...s, [id]: !s[id] }));
+  };
+
+  const handleConfirmDownload = async () => {
+    const types = UPLOAD_TYPE_OPTIONS.filter((o) => downloadSelection[o.id]).map((o) => o.id);
+    if (types.length === 0) {
+      Alert.alert('Pilih Data', 'Pilih minimal satu jenis data untuk diunduh.');
+      return;
+    }
+    setDownloadPickerOpen(false);
     setDownloading(true);
     try {
-      const result = await downloadSync(deviceId);
+      const result = await downloadSync(deviceId, types);
       await loadData();
       if (result.failed > 0) {
         Alert.alert(
@@ -125,6 +174,68 @@ export function SyncCenterScreen() {
 
   return (
     <AppScreen scroll>
+      <AppModal
+        visible={uploadPickerOpen}
+        onClose={() => setUploadPickerOpen(false)}
+        title="Pilih data untuk diunggah"
+        secondaryAction={{ label: 'Batal', onPress: () => setUploadPickerOpen(false) }}
+        primaryAction={{
+          label: 'Unggah',
+          onPress: handleConfirmUpload,
+        }}
+      >
+        <AppText variant="captionMuted" style={styles.pickerHint}>
+          Centang satu atau lebih jenis data yang ingin dikirim ke cloud.
+        </AppText>
+        <ScrollView style={styles.pickerList} keyboardShouldPersistTaps="handled">
+          {UPLOAD_TYPE_OPTIONS.map((opt) => (
+            <Pressable
+              key={opt.id}
+              style={styles.pickerRow}
+              onPress={() => toggleUploadType(opt.id)}
+            >
+              {uploadSelection[opt.id] ? (
+                <Check size={22} color={colors.primary} />
+              ) : (
+                <Square size={22} color={colors.textMuted} />
+              )}
+              <AppText variant="bodyMedium" style={styles.pickerLabel}>{opt.label}</AppText>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </AppModal>
+
+      <AppModal
+        visible={downloadPickerOpen}
+        onClose={() => setDownloadPickerOpen(false)}
+        title="Pilih data untuk diunduh"
+        secondaryAction={{ label: 'Batal', onPress: () => setDownloadPickerOpen(false) }}
+        primaryAction={{
+          label: 'Unduh',
+          onPress: handleConfirmDownload,
+        }}
+      >
+        <AppText variant="captionMuted" style={styles.pickerHint}>
+          Centang satu atau lebih jenis data yang ingin diambil dari cloud. Item baris transaksi ikut saat Transaksi dipilih.
+        </AppText>
+        <ScrollView style={styles.pickerList} keyboardShouldPersistTaps="handled">
+          {UPLOAD_TYPE_OPTIONS.map((opt) => (
+            <Pressable
+              key={opt.id}
+              style={styles.pickerRow}
+              onPress={() => toggleDownloadType(opt.id)}
+            >
+              {downloadSelection[opt.id] ? (
+                <Check size={22} color={colors.primary} />
+              ) : (
+                <Square size={22} color={colors.textMuted} />
+              )}
+              <AppText variant="bodyMedium" style={styles.pickerLabel}>{opt.label}</AppText>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </AppModal>
+
       <AppText variant="title" style={styles.pageTitle}>Pusat Sinkronisasi</AppText>
 
       <AppCard style={styles.statusCard}>
@@ -162,7 +273,7 @@ export function SyncCenterScreen() {
       <View style={styles.actionRow}>
         <AppButton
           title="Unggah Data"
-          onPress={handleUpload}
+          onPress={openUploadPicker}
           loading={uploading}
           disabled={downloading}
           icon={<Upload size={18} color={colors.textInverse} />}
@@ -171,7 +282,7 @@ export function SyncCenterScreen() {
         />
         <AppButton
           title="Unduh Data"
-          onPress={handleDownload}
+          onPress={openDownloadPicker}
           loading={downloading}
           disabled={uploading}
           variant="secondary"
@@ -294,6 +405,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   actionBtn: {
+    flex: 1,
+  },
+  pickerHint: {
+    marginBottom: spacing.md,
+  },
+  pickerList: {
+    maxHeight: 320,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  pickerLabel: {
     flex: 1,
   },
   logCard: {

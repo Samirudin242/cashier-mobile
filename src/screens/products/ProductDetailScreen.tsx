@@ -50,6 +50,7 @@ export function ProductDetailScreen() {
         <DetailRow label="SKU" value={product.sku} />
         <DetailRow label="Harga Jual" value={formatCurrency(product.price)} highlight />
         <DetailRow label="Harga Modal" value={formatCurrency(product.cost_price)} />
+        <DetailRow label="Biaya penangan" value={formatCurrency(product.handling_fee ?? 0)} />
         <DetailRow label="Stok" value={String(product.stock)} />
         <DetailRow label="Kategori" value={product.category} />
         <DetailRow label="Status" value={product.is_active ? 'Aktif' : 'Nonaktif'} />

@@ -1,6 +1,6 @@
 import { getDatabase } from '../database/sqlite/client';
 import { Transaction, TransactionItem, CartItem, SyncStatus } from '../types';
-import { generateLocalId, generateTransactionNumber, nowISO } from '../utils/helpers';
+import { generateLocalId, generateTransactionNumber, getLocalDayRangeISO, nowISO } from '../utils/helpers';
 import { customerRepository } from './customerRepository';
 
 export const transactionRepository = {
@@ -9,6 +9,16 @@ export const transactionRepository = {
     const rows = await db.getAllAsync<any>(
       'SELECT * FROM transactions WHERE is_deleted = 0 ORDER BY transaction_date DESC LIMIT ? OFFSET ?',
       [limit, offset]
+    );
+    return rows.map(mapRowToTransaction);
+  },
+
+  async getForLocalCalendarDay(day: Date, limit = 100): Promise<Transaction[]> {
+    const { startISO, endISO } = getLocalDayRangeISO(day);
+    const db = await getDatabase();
+    const rows = await db.getAllAsync<any>(
+      `SELECT * FROM transactions WHERE is_deleted = 0 AND transaction_date >= ? AND transaction_date < ? ORDER BY transaction_date DESC LIMIT ?`,
+      [startISO, endISO, limit]
     );
     return rows.map(mapRowToTransaction);
   },
@@ -89,7 +99,7 @@ export const transactionRepository = {
     });
 
     if (customerId) {
-      await customerRepository.incrementStats(customerId, total);
+      await customerRepository.incrementStats(customerId, total, data.employee_id);
     }
 
     return (await this.getById(txnId))!;

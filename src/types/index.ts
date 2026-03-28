@@ -48,7 +48,7 @@ export interface EmployeeSalary {
     handlingTotal: number;
     net: number;
     bonus: number;
-    items?: { productName: string; handlingFee: number; quantity: number; bonus: number }[];
+    items?: { productName: string; baseForBonus: number; quantity: number; bonus: number }[];
   }[];
   attendanceDetails: { date: string; status: string; clockIn: string; clockOut: string | null }[];
 }
