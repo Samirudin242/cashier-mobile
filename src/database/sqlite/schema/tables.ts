@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   is_active INTEGER NOT NULL DEFAULT 1,
   daily_salary REAL NOT NULL DEFAULT 0,
   bonus_percent REAL NOT NULL DEFAULT 10,
+  allowance REAL NOT NULL DEFAULT 0,
   logged_in_device_id TEXT,
   created_at TEXT NOT NULL
 );

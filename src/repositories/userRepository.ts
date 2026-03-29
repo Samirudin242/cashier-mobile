@@ -1,7 +1,23 @@
 import { getDatabase } from "../database/sqlite/client";
 import { supabase } from "../config/supabase";
+import type { PostgrestError } from "@supabase/supabase-js";
 import { User, UserRole } from "../types";
 import { generateLocalId, nowISO } from "../utils/helpers";
+
+/** Cloud DB may not have `allowance` until migration is applied; PostgREST errors vary by version. */
+function isAllowanceColumnMissing(error: PostgrestError | null): boolean {
+  if (!error) return false;
+  const m = (error.message ?? "").toLowerCase();
+  const c = (error.code ?? "").toLowerCase();
+  if (!m.includes("allowance")) return false;
+  return (
+    m.includes("does not exist") ||
+    m.includes("schema cache") ||
+    m.includes("could not find") ||
+    c === "42703" ||
+    c === "pgrst204"
+  );
+}
 
 export const userRepository = {
   /**
@@ -10,9 +26,7 @@ export const userRepository = {
   async findByAccessCodeFromSupabase(code: string): Promise<User | null> {
     const { data, error } = await supabase
       .from("users")
-      .select(
-        "id, name, role, access_code, store_id, is_active, daily_salary, bonus_percent"
-      )
+      .select("*")
       .eq("access_code", code.trim().toUpperCase())
       .maybeSingle();
 
@@ -28,6 +42,7 @@ export const userRepository = {
       is_active: !!data.is_active,
       daily_salary: data.daily_salary ?? 0,
       bonus_percent: data.bonus_percent ?? 10,
+      allowance: data.allowance ?? 0,
     };
   },
 
@@ -51,7 +66,7 @@ export const userRepository = {
     }
     if (existing) {
       await db.runAsync(
-        `UPDATE users SET name = ?, role = ?, access_code = ?, store_id = ?, is_active = ?, daily_salary = ?, bonus_percent = ? WHERE id = ?`,
+        `UPDATE users SET name = ?, role = ?, access_code = ?, store_id = ?, is_active = ?, daily_salary = ?, bonus_percent = ?, allowance = ? WHERE id = ?`,
         [
           user.name,
           user.role,
@@ -60,12 +75,13 @@ export const userRepository = {
           user.is_active ? 1 : 0,
           user.daily_salary,
           user.bonus_percent,
+          user.allowance ?? 0,
           existing.id,
         ]
       );
     } else {
       await db.runAsync(
-        "INSERT INTO users (id, name, role, access_code, store_id, is_active, daily_salary, bonus_percent, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO users (id, name, role, access_code, store_id, is_active, daily_salary, bonus_percent, allowance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
           user.id,
           user.name,
@@ -75,6 +91,7 @@ export const userRepository = {
           user.is_active ? 1 : 0,
           user.daily_salary,
           user.bonus_percent,
+          user.allowance ?? 0,
           now,
         ]
       );
@@ -128,10 +145,15 @@ export const userRepository = {
       is_active: user.is_active,
       daily_salary: user.daily_salary,
       bonus_percent: user.bonus_percent,
+      allowance: user.allowance ?? 0,
     };
-    const { error } = await supabase
-      .from("users")
-      .upsert(payload, { onConflict: "access_code" });
+    let { error } = await supabase.from("users").upsert(payload, { onConflict: "access_code" });
+    if (error && isAllowanceColumnMissing(error)) {
+      const { allowance: _a, ...withoutAllowance } = payload;
+      ({ error } = await supabase
+        .from("users")
+        .upsert(withoutAllowance, { onConflict: "access_code" }));
+    }
     if (error) {
       if (error.code === "23505") {
         throw new Error("Kode akses sudah digunakan. Gunakan kode lain.");
@@ -140,15 +162,100 @@ export const userRepository = {
     }
   },
 
+  /**
+   * Free access_code for reuse: inactive users keep the row (FK-safe) but get a unique archival code.
+   */
+  async reclaimAccessCodeFromInactive(accessCode: string): Promise<void> {
+    const code = accessCode.trim().toUpperCase();
+    const archival = (original: string, userId: string) => {
+      const base = String(original)
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+      const tail = userId.replace(/[^a-z0-9]/gi, "").slice(-12) || "X";
+      const next = `${base}_OFF_${tail}`;
+      return next.length > 72 ? next.slice(0, 72) : next;
+    };
+
+    const db = await getDatabase();
+    const local = await db.getFirstAsync<any>(
+      "SELECT * FROM users WHERE access_code = ?",
+      [code]
+    );
+    if (local && !local.is_active) {
+      const nextCode = archival(code, local.id);
+      await db.runAsync("UPDATE users SET access_code = ? WHERE id = ?", [
+        nextCode,
+        local.id,
+      ]);
+      try {
+        await supabase
+          .from("users")
+          .update({ access_code: nextCode })
+          .eq("id", local.id);
+      } catch {
+        /* offline */
+      }
+    }
+
+    const { data: cloud } = await supabase
+      .from("users")
+      .select("id, is_active")
+      .eq("access_code", code)
+      .maybeSingle();
+
+    if (cloud && cloud.is_active === false) {
+      const nextCode = archival(code, cloud.id);
+      await supabase.from("users").update({ access_code: nextCode }).eq("id", cloud.id);
+      const localMatch = await db.getFirstAsync<any>(
+        "SELECT id, access_code FROM users WHERE id = ?",
+        [cloud.id]
+      );
+      if (localMatch && localMatch.access_code === code) {
+        await db.runAsync("UPDATE users SET access_code = ? WHERE id = ?", [
+          nextCode,
+          cloud.id,
+        ]);
+      }
+    }
+  },
+
   async createEmployee(data: {
     name: string;
     accessCode: string;
     dailySalary: number;
     bonusPercent: number;
+    allowance?: number;
     storeId?: string;
   }): Promise<User> {
     const id = "usr_" + generateLocalId().slice(0, 12);
     const code = data.accessCode.trim().toUpperCase();
+
+    await this.reclaimAccessCodeFromInactive(code);
+
+    const db = await getDatabase();
+    const activeLocal = await db.getFirstAsync<{ id: string }>(
+      "SELECT id FROM users WHERE access_code = ? AND is_active = 1",
+      [code]
+    );
+    if (activeLocal) {
+      throw new Error(
+        "Kode akses sudah dipakai karyawan aktif. Gunakan kode lain."
+      );
+    }
+
+    const { data: cloudRow } = await supabase
+      .from("users")
+      .select("id, is_active")
+      .eq("access_code", code)
+      .maybeSingle();
+    if (cloudRow?.is_active === true) {
+      throw new Error(
+        "Kode akses sudah dipakai di server. Gunakan kode lain."
+      );
+    }
+
+    const allowance = data.allowance ?? 0;
     const user: User = {
       id,
       name: data.name.trim(),
@@ -158,36 +265,48 @@ export const userRepository = {
       is_active: true,
       daily_salary: data.dailySalary,
       bonus_percent: data.bonusPercent,
+      allowance,
     };
 
     await this.uploadUserToSupabase(user);
 
-    const db = await getDatabase();
-    await db.runAsync(
-      "INSERT INTO users (id, name, role, access_code, store_id, is_active, daily_salary, bonus_percent, created_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)",
-      [
-        id,
-        user.name,
-        user.role,
-        user.access_code,
-        user.store_id,
-        user.daily_salary,
-        user.bonus_percent,
-        nowISO(),
-      ]
-    );
+    try {
+      await db.runAsync(
+        "INSERT INTO users (id, name, role, access_code, store_id, is_active, daily_salary, bonus_percent, allowance, created_at) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)",
+        [
+          id,
+          user.name,
+          user.role,
+          user.access_code,
+          user.store_id,
+          user.daily_salary,
+          user.bonus_percent,
+          allowance,
+          nowISO(),
+        ]
+      );
+    } catch (e: any) {
+      const msg = e?.message ?? "";
+      if (msg.includes("UNIQUE") && msg.includes("access_code")) {
+        throw new Error(
+          "Kode akses bentrok dengan data lama. Coba kode lain, atau sinkronkan data lalu coba lagi."
+        );
+      }
+      throw e;
+    }
 
     return user;
   },
 
   async updateEmployee(
     id: string,
-    data: { name: string; dailySalary: number; bonusPercent: number }
+    data: { name: string; dailySalary: number; bonusPercent: number; allowance?: number }
   ): Promise<void> {
     const db = await getDatabase();
+    const allowance = data.allowance ?? 0;
     await db.runAsync(
-      "UPDATE users SET name = ?, daily_salary = ?, bonus_percent = ? WHERE id = ?",
-      [data.name.trim(), data.dailySalary, data.bonusPercent, id]
+      "UPDATE users SET name = ?, daily_salary = ?, bonus_percent = ?, allowance = ? WHERE id = ?",
+      [data.name.trim(), data.dailySalary, data.bonusPercent, allowance, id]
     );
 
     const user = await this.getById(id);
@@ -198,6 +317,7 @@ export const userRepository = {
           name: data.name.trim(),
           daily_salary: data.dailySalary,
           bonus_percent: data.bonusPercent,
+          allowance,
         });
       } catch (err) {
         console.warn("[updateEmployee] Supabase upload failed:", err);
@@ -210,7 +330,33 @@ export const userRepository = {
 
   async deactivateEmployee(id: string): Promise<void> {
     const db = await getDatabase();
-    await db.runAsync("UPDATE users SET is_active = 0 WHERE id = ?", [id]);
+    const row = await db.getFirstAsync<any>("SELECT * FROM users WHERE id = ?", [id]);
+    if (!row || !row.is_active) return;
+
+    const archival = (original: string, userId: string) => {
+      const base = String(original)
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+      const tail = userId.replace(/[^a-z0-9]/gi, "").slice(-12) || "X";
+      const next = `${base}_OFF_${tail}`;
+      return next.length > 72 ? next.slice(0, 72) : next;
+    };
+    const nextCode = archival(row.access_code, id);
+
+    await db.runAsync(
+      "UPDATE users SET is_active = 0, access_code = ? WHERE id = ?",
+      [nextCode, id]
+    );
+    try {
+      const { error } = await supabase
+        .from("users")
+        .update({ is_active: false, access_code: nextCode })
+        .eq("id", id);
+      if (error) throw error;
+    } catch (e) {
+      console.warn("[deactivateEmployee] Supabase:", e);
+    }
   },
 
   async getEmployeeAttendance(
@@ -219,15 +365,43 @@ export const userRepository = {
     endDate: string
   ) {
     const db = await getDatabase();
+    const user = await this.getById(employeeId);
+    if (!user) return [];
+
+    const dupName = await db.getFirstAsync<{ c: number }>(
+      "SELECT COUNT(*) AS c FROM users WHERE role = 'employee' AND is_active = 1 AND TRIM(name) = TRIM(?) COLLATE NOCASE",
+      [user.name]
+    );
+    const onlyOneWithThisName = (dupName?.c ?? 0) === 1;
+
+    if (onlyOneWithThisName) {
+      return db.getAllAsync<any>(
+        `SELECT * FROM attendance
+         WHERE is_deleted = 0
+         AND date(date) >= date(?) AND date(date) <= date(?)
+         AND (
+           employee_id = ?
+           OR TRIM(employee_name) = TRIM(?) COLLATE NOCASE
+         )
+         ORDER BY date ASC`,
+        [startDate, endDate, employeeId, user.name]
+      );
+    }
+
     return db.getAllAsync<any>(
-      "SELECT * FROM attendance WHERE employee_id = ? AND date >= ? AND date <= ? AND is_deleted = 0 ORDER BY date ASC",
-      [employeeId, startDate, endDate]
+      `SELECT * FROM attendance
+       WHERE is_deleted = 0
+       AND date(date) >= date(?) AND date(date) <= date(?)
+       AND employee_id = ?
+       ORDER BY date ASC`,
+      [startDate, endDate, employeeId]
     );
   },
 
   /**
    * Get bonus-earning transactions for an employee in a date range.
-   * Bonus per item: (product_price - handling_fee) × quantity × bonus_percent%
+   * Bonus per item: ((harga_jual - harga_modal) - biaya_penanganan) × qty × bonus_percent%
+   * Modal diambil dari produk (LEFT JOIN); jika produk tidak ada, modal = 0.
    */
   async getEmployeeTransactionBonus(
     employeeId: string,
@@ -239,9 +413,11 @@ export const userRepository = {
     const pct = bonusPercent / 100;
     const rows = await db.getAllAsync<any>(
       `SELECT t.local_id, t.transaction_number, t.transaction_date,
-              ti.product_name, ti.product_price, ti.handling_fee, ti.quantity, ti.subtotal
+              ti.product_name, ti.product_price, ti.handling_fee, ti.quantity, ti.subtotal,
+              COALESCE(p.cost_price, 0) AS cost_price
        FROM transactions t
        JOIN transaction_items ti ON ti.transaction_local_id = t.local_id
+       LEFT JOIN products p ON p.local_id = ti.product_local_id AND p.is_deleted = 0
        WHERE t.employee_id = ? AND date(t.transaction_date) >= date(?) AND date(t.transaction_date) <= date(?) AND t.is_deleted = 0
        ORDER BY t.transaction_date ASC, ti.local_id ASC`,
       [employeeId, startDate, endDate]
@@ -260,9 +436,10 @@ export const userRepository = {
     for (const r of rows) {
       const tid = r.local_id;
       const price = (r.product_price as number) ?? 0;
+      const costPrice = (r.cost_price as number) ?? 0;
       const handlingFee = (r.handling_fee as number) ?? 0;
       const qty = (r.quantity as number) ?? 1;
-      const netPerUnit = Math.max(0, price - handlingFee);
+      const netPerUnit = Math.max(0, price - costPrice - handlingFee);
       const baseForBonus = netPerUnit * qty;
       const itemBonus = baseForBonus * pct;
       const handlingForItem = handlingFee * qty;
@@ -288,14 +465,14 @@ export const userRepository = {
     }
 
     return Array.from(txMap.values()).map((tx) => {
-      const net = Math.max(0, tx.itemsTotal - tx.handlingTotal);
+      const bonusBase = tx.items.reduce((sum, i) => sum + i.baseForBonus, 0);
       const bonus = tx.items.reduce((sum, i) => sum + i.bonus, 0);
       return {
         transactionNumber: tx.transactionNumber,
         date: tx.date,
         itemsTotal: tx.itemsTotal,
         handlingTotal: tx.handlingTotal,
-        net,
+        net: bonusBase,
         bonus,
         items: tx.items,
       };
@@ -367,5 +544,6 @@ function mapRow(row: any): User {
     is_active: !!row.is_active,
     daily_salary: row.daily_salary ?? 0,
     bonus_percent: row.bonus_percent ?? 10,
+    allowance: row.allowance ?? 0,
   };
 }

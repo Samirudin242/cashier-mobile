@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { Package, Edit, Trash2 } from 'lucide-react-native';
-import { AppScreen, AppCard, AppText, AppButton, SyncBadge } from '../../components/ui';
-import { productRepository } from '../../repositories/productRepository';
-import { useAuthStore } from '../../stores/authStore';
-import { Product } from '../../types';
-import { formatCurrency, formatDateTime } from '../../utils/helpers';
-import { colors, spacing, radius } from '../../config/theme';
+import React, { useState, useEffect } from "react";
+import { View, StyleSheet, Alert } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { Package, Edit, Trash2 } from "lucide-react-native";
+import {
+  AppScreen,
+  AppCard,
+  AppText,
+  AppButton,
+  SyncBadge,
+} from "../../components/ui";
+import { productRepository } from "../../repositories/productRepository";
+import { useAuthStore } from "../../stores/authStore";
+import { Product } from "../../types";
+import { formatCurrency, formatDateTime } from "../../utils/helpers";
+import { colors, spacing, radius } from "../../config/theme";
 
 export function ProductDetailScreen() {
   const navigation = useNavigation<any>();
@@ -21,17 +27,21 @@ export function ProductDetailScreen() {
   }, [localId]);
 
   const handleDelete = () => {
-    Alert.alert('Hapus Produk', 'Apakah Anda yakin ingin menghapus produk ini?', [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Hapus',
-        style: 'destructive',
-        onPress: async () => {
-          await productRepository.softDelete(localId, user!.id);
-          navigation.goBack();
+    Alert.alert(
+      "Hapus Produk",
+      "Apakah Anda yakin ingin menghapus produk ini?",
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            await productRepository.softDelete(localId, user!.id);
+            navigation.goBack();
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   if (!product) return null;
@@ -48,20 +58,39 @@ export function ProductDetailScreen() {
 
       <AppCard style={styles.card}>
         <DetailRow label="SKU" value={product.sku} />
-        <DetailRow label="Harga Jual" value={formatCurrency(product.price)} highlight />
-        <DetailRow label="Harga Modal" value={formatCurrency(product.cost_price)} />
-        <DetailRow label="Biaya penangan" value={formatCurrency(product.handling_fee ?? 0)} />
+        <DetailRow
+          label="Harga Jual"
+          value={formatCurrency(product.price)}
+          highlight
+        />
+        <DetailRow
+          label="Harga Modal"
+          value={formatCurrency(product.cost_price)}
+        />
+        <DetailRow
+          label="Biaya penanganan"
+          value={formatCurrency(product.handling_fee ?? 0)}
+        />
         <DetailRow label="Stok" value={String(product.stock)} />
         <DetailRow label="Kategori" value={product.category} />
-        <DetailRow label="Status" value={product.is_active ? 'Aktif' : 'Nonaktif'} />
-        <DetailRow label="Dibuat" value={formatDateTime(product.created_at_local)} />
-        <DetailRow label="Diperbarui" value={formatDateTime(product.updated_at_local)} />
+        <DetailRow
+          label="Status"
+          value={product.is_active ? "Aktif" : "Nonaktif"}
+        />
+        <DetailRow
+          label="Dibuat"
+          value={formatDateTime(product.created_at_local)}
+        />
+        <DetailRow
+          label="Diperbarui"
+          value={formatDateTime(product.updated_at_local)}
+        />
       </AppCard>
 
       <View style={styles.actions}>
         <AppButton
           title="Edit Produk"
-          onPress={() => navigation.navigate('ProductForm', { localId })}
+          onPress={() => navigation.navigate("ProductForm", { localId })}
           icon={<Edit size={16} color={colors.textInverse} />}
           fullWidth
           size="lg"
@@ -80,11 +109,22 @@ export function ProductDetailScreen() {
   );
 }
 
-function DetailRow({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function DetailRow({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
     <View style={detailStyles.row}>
       <AppText variant="caption">{label}</AppText>
-      <AppText variant={highlight ? 'bodySemibold' : 'body'} style={highlight ? { color: colors.primary } : undefined}>
+      <AppText
+        variant={highlight ? "bodySemibold" : "body"}
+        style={highlight ? { color: colors.primary } : undefined}
+      >
         {value}
       </AppText>
     </View>
@@ -93,9 +133,9 @@ function DetailRow({ label, value, highlight }: { label: string; value: string; 
 
 const detailStyles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
@@ -104,7 +144,7 @@ const detailStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: spacing.xl,
   },
   iconBox: {
@@ -112,8 +152,8 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: radius.xl,
     backgroundColor: colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: spacing.md,
   },
   badge: {

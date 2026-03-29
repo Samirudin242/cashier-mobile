@@ -30,6 +30,8 @@ export interface User {
   is_active: boolean;
   daily_salary: number;
   bonus_percent: number;
+  /** Fixed monthly allowance (tunjangan), added once per salary period. */
+  allowance: number;
 }
 
 export interface EmployeeSalary {
@@ -46,6 +48,7 @@ export interface EmployeeSalary {
     date: string;
     itemsTotal: number;
     handlingTotal: number;
+    /** Sum of per-item ((jual−modal)−penanganan)×qty before bonus % */
     net: number;
     bonus: number;
     items?: { productName: string; baseForBonus: number; quantity: number; bonus: number }[];

@@ -1,6 +1,12 @@
 import { getDatabase } from '../database/sqlite/client';
 import { Transaction, TransactionItem, CartItem, SyncStatus } from '../types';
-import { generateLocalId, generateTransactionNumber, getLocalDayRangeISO, nowISO } from '../utils/helpers';
+import {
+  generateLocalId,
+  generateTransactionNumber,
+  getLocalDayRangeISO,
+  nowISO,
+  todayDateString,
+} from '../utils/helpers';
 import { customerRepository } from './customerRepository';
 
 export const transactionRepository = {
@@ -225,6 +231,109 @@ export const transactionRepository = {
       [days]
     );
     return rows.map((r: any) => ({ date: r.date, total: r.total, count: r.count }));
+  },
+
+  async getDailySummaryDateRange(
+    startDate: string,
+    endDate: string
+  ): Promise<{ date: string; total: number; count: number }[]> {
+    const db = await getDatabase();
+    const rows = await db.getAllAsync<any>(
+      `SELECT date(transaction_date) as date, SUM(total) as total, COUNT(*) as count
+       FROM transactions WHERE is_deleted = 0
+       AND date(transaction_date) >= ? AND date(transaction_date) <= ?
+       GROUP BY date(transaction_date)
+       ORDER BY date ASC`,
+      [startDate, endDate]
+    );
+    return rows.map((r: any) => ({ date: r.date, total: r.total, count: r.count }));
+  },
+
+  /**
+   * Per calendar day: gross profit (Σ(jual−modal)×qty), total capital (modal×qty), total handling fees.
+   * Modal from `products.cost_price`; missing product → modal 0.
+   */
+  async getDailyItemsEconomics(
+    days: number = 7
+  ): Promise<
+    { date: string; profit: number; capitalSold: number; handlingTotal: number }[]
+  > {
+    const db = await getDatabase();
+    const rows = await db.getAllAsync<any>(
+      `SELECT
+         date(t.transaction_date) AS d,
+         SUM((ti.product_price - COALESCE(p.cost_price, 0)) * ti.quantity) AS profit,
+         SUM(COALESCE(p.cost_price, 0) * ti.quantity) AS capital_sold,
+         SUM(ti.handling_fee * ti.quantity) AS handling_total
+       FROM transaction_items ti
+       INNER JOIN transactions t ON t.local_id = ti.transaction_local_id AND t.is_deleted = 0
+       LEFT JOIN products p ON p.local_id = ti.product_local_id AND p.is_deleted = 0
+       GROUP BY date(t.transaction_date)
+       ORDER BY d DESC
+       LIMIT ?`,
+      [days]
+    );
+    return rows.map((r: any) => ({
+      date: r.d,
+      profit: r.profit ?? 0,
+      capitalSold: r.capital_sold ?? 0,
+      handlingTotal: r.handling_total ?? 0,
+    }));
+  },
+
+  async getDailyItemsEconomicsDateRange(
+    startDate: string,
+    endDate: string
+  ): Promise<
+    { date: string; profit: number; capitalSold: number; handlingTotal: number }[]
+  > {
+    const db = await getDatabase();
+    const rows = await db.getAllAsync<any>(
+      `SELECT
+         date(t.transaction_date) AS d,
+         SUM((ti.product_price - COALESCE(p.cost_price, 0)) * ti.quantity) AS profit,
+         SUM(COALESCE(p.cost_price, 0) * ti.quantity) AS capital_sold,
+         SUM(ti.handling_fee * ti.quantity) AS handling_total
+       FROM transaction_items ti
+       INNER JOIN transactions t ON t.local_id = ti.transaction_local_id AND t.is_deleted = 0
+       LEFT JOIN products p ON p.local_id = ti.product_local_id AND p.is_deleted = 0
+       WHERE date(t.transaction_date) >= ? AND date(t.transaction_date) <= ?
+       GROUP BY date(t.transaction_date)
+       ORDER BY d ASC`,
+      [startDate, endDate]
+    );
+    return rows.map((r: any) => ({
+      date: r.d,
+      profit: r.profit ?? 0,
+      capitalSold: r.capital_sold ?? 0,
+      handlingTotal: r.handling_total ?? 0,
+    }));
+  },
+
+  /** Today's aggregates from line items (local calendar date). */
+  async getTodayItemsEconomics(): Promise<{
+    profit: number;
+    capitalSold: number;
+    handlingTotal: number;
+  }> {
+    const db = await getDatabase();
+    const today = todayDateString();
+    const row = await db.getFirstAsync<any>(
+      `SELECT
+         SUM((ti.product_price - COALESCE(p.cost_price, 0)) * ti.quantity) AS profit,
+         SUM(COALESCE(p.cost_price, 0) * ti.quantity) AS capital_sold,
+         SUM(ti.handling_fee * ti.quantity) AS handling_total
+       FROM transaction_items ti
+       INNER JOIN transactions t ON t.local_id = ti.transaction_local_id AND t.is_deleted = 0
+       LEFT JOIN products p ON p.local_id = ti.product_local_id AND p.is_deleted = 0
+       WHERE date(t.transaction_date) = date(?)`,
+      [today]
+    );
+    return {
+      profit: row?.profit ?? 0,
+      capitalSold: row?.capital_sold ?? 0,
+      handlingTotal: row?.handling_total ?? 0,
+    };
   },
 };
 

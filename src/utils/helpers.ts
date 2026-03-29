@@ -45,8 +45,13 @@ export function nowISO(): string {
   return new Date().toISOString();
 }
 
+/** Calendar date in device local timezone (YYYY-MM-DD). Used for attendance `date` so month filters match. */
 export function todayDateString(): string {
-  return new Date().toISOString().split('T')[0];
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 /** Inclusive start and exclusive end of the calendar day in local time, as ISO strings (for SQL comparisons on UTC timestamps). */
@@ -71,6 +76,46 @@ export function addLocalCalendarDays(date: Date, deltaDays: number): Date {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   d.setDate(d.getDate() + deltaDays);
   return d;
+}
+
+/** Parse YYYY-MM-DD in local calendar (not UTC). */
+export function parseLocalDateString(s: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+  if (!m) return null;
+  const y = +m[1];
+  const mo = +m[2] - 1;
+  const d = +m[3];
+  const dt = new Date(y, mo, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== mo || dt.getDate() !== d) return null;
+  return dt;
+}
+
+export function formatLocalDateString(d: Date): string {
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${day}`;
+}
+
+/** Inclusive list of calendar dates from start through end (YYYY-MM-DD). */
+export function enumerateDatesInclusive(startStr: string, endStr: string): string[] {
+  const start = parseLocalDateString(startStr);
+  const end = parseLocalDateString(endStr);
+  if (!start || !end) return [];
+  const startT = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+  const endT = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+  if (startT > endT) return [];
+  const out: string[] = [];
+  const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  while (cur.getTime() <= endT) {
+    out.push(formatLocalDateString(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return out;
+}
+
+export function countDaysInclusive(startStr: string, endStr: string): number {
+  return enumerateDatesInclusive(startStr, endStr).length;
 }
 
 /**

@@ -2,6 +2,31 @@ import { getDatabase } from "../database/sqlite/client";
 import { Attendance, SyncStatus } from "../types";
 import { generateLocalId, nowISO } from "../utils/helpers";
 
+/**
+ * Map cloud/other-device employee_id to this device's users.id so salary/absensi queries match.
+ */
+async function resolveLocalEmployeeId(
+  employeeIdFromCloud: string,
+  employeeName: string
+): Promise<string> {
+  const db = await getDatabase();
+  const direct = await db.getFirstAsync<{ id: string }>(
+    "SELECT id FROM users WHERE id = ?",
+    [employeeIdFromCloud]
+  );
+  if (direct) return direct.id;
+
+  const name = (employeeName ?? "").trim();
+  if (!name) return employeeIdFromCloud;
+
+  const matches = await db.getAllAsync<{ id: string }>(
+    "SELECT id FROM users WHERE role = 'employee' AND is_active = 1 AND TRIM(name) = ? COLLATE NOCASE",
+    [name]
+  );
+  if (matches.length === 1) return matches[0].id;
+  return employeeIdFromCloud;
+}
+
 export const attendanceRepository = {
   async getAll(limit = 50): Promise<Attendance[]> {
     const db = await getDatabase();
@@ -119,6 +144,10 @@ export const attendanceRepository = {
   async upsertFromCloud(data: any, deviceId: string): Promise<void> {
     const db = await getDatabase();
     const now = nowISO();
+    const resolvedEmployeeId = await resolveLocalEmployeeId(
+      String(data.employee_id ?? ""),
+      String(data.employee_name ?? "")
+    );
 
     let existing = await db.getFirstAsync<any>(
       "SELECT * FROM attendance WHERE cloud_id = ?",
@@ -126,16 +155,20 @@ export const attendanceRepository = {
     );
     if (!existing) {
       existing = await db.getFirstAsync<any>(
-        "SELECT * FROM attendance WHERE employee_id = ? AND date = ? AND cloud_id IS NULL",
-        [data.employee_id, data.date]
+        `SELECT * FROM attendance
+         WHERE cloud_id IS NULL
+         AND date(date) = date(?)
+         AND (employee_id = ? OR employee_id = ?)`,
+        [data.date, data.employee_id, resolvedEmployeeId]
       );
     }
 
     if (existing) {
       await db.runAsync(
-        `UPDATE attendance SET cloud_id = ?, employee_name = ?, clock_in = ?, clock_out = ?, date = ?, notes = ?, status = ?, sync_status = 'synced', last_synced_at = ?, updated_at_local = ? WHERE local_id = ?`,
+        `UPDATE attendance SET cloud_id = ?, employee_id = ?, employee_name = ?, clock_in = ?, clock_out = ?, date = ?, notes = ?, status = ?, sync_status = 'synced', last_synced_at = ?, updated_at_local = ? WHERE local_id = ?`,
         [
           data.id,
+          resolvedEmployeeId,
           data.employee_name,
           data.clock_in,
           data.clock_out,
@@ -154,7 +187,7 @@ export const attendanceRepository = {
         [
           generateLocalId(),
           data.id,
-          data.employee_id,
+          resolvedEmployeeId,
           data.employee_name,
           data.clock_in,
           data.clock_out,

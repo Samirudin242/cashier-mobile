@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, FlatList, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, FlatList, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShoppingCart, Search, Package, ChevronRight, Minus, Plus } from 'lucide-react-native';
 import { AppScreen, AppText, AppInput, AppEmptyState } from '../../components/ui';
 import { productRepository } from '../../repositories/productRepository';
@@ -14,11 +15,7 @@ const ALL_CATEGORY = 'Semua';
 
 /** Min height of cart row (icon + text) inside the pill */
 const CART_BAR_ROW_MIN_HEIGHT = 44;
-/**
- * Total stacked height of the cart pill (paddingVertical × 2 + row).
- * Tab scene bottom already sits flush with the top of the tab bar (RN bottom-tabs column layout),
- * so the pill uses bottom: 0 — do not add tabBarHeight again.
- */
+/** Total stacked height of the cart pill (paddingVertical × 2 + row). Bottom offset for system nav is separate. */
 const CART_BAR_TOTAL_HEIGHT =
   spacing.sm * 2 + CART_BAR_ROW_MIN_HEIGHT + 4;
 
@@ -80,6 +77,10 @@ const ProductTile = React.memo(
 );
 
 export function CheckoutScreen() {
+  const insets = useSafeAreaInsets();
+  /** Lift above Android 3-button / gesture nav when safe inset is missing or too small on OEM skins. */
+  const cartBottomInset =
+    Platform.OS === 'android' ? Math.max(insets.bottom, 20) : insets.bottom;
   const navigation = useNavigation<any>();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -148,10 +149,10 @@ export function CheckoutScreen() {
 
   const listBottomPad = useMemo(() => {
     if (itemCount > 0) {
-      return CART_BAR_TOTAL_HEIGHT + spacing.base;
+      return CART_BAR_TOTAL_HEIGHT + spacing.base + cartBottomInset;
     }
     return spacing.xxxl;
-  }, [itemCount]);
+  }, [itemCount, cartBottomInset]);
 
   return (
     <View style={styles.container}>
@@ -208,7 +209,7 @@ export function CheckoutScreen() {
 
       {itemCount > 0 && (
         <Pressable
-          style={[styles.cartBar, { bottom: 0, left: spacing.base, right: spacing.base }]}
+          style={[styles.cartBar, { bottom: cartBottomInset, left: spacing.base, right: spacing.base }]}
           onPress={() => navigation.navigate('CartReview')}
         >
           <View style={styles.cartBarRow}>

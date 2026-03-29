@@ -32,34 +32,6 @@ export async function generateSalaryPdf(salary: EmployeeSalary): Promise<void> {
     )
     .join('');
 
-  const bonusPct = salary.employee.bonus_percent;
-  const bonusRows = salary.transactions
-    .map((t, i) => {
-      const itemRows = (t.items ?? [])
-        .map(
-          (item) =>
-            `<tr style="background:#FAFAFA;">
-              <td></td>
-              <td colspan="2" style="padding-left:20px;">• ${item.productName} (×${item.quantity})</td>
-              <td>${formatCurrency(item.baseForBonus)}</td>
-              <td></td>
-              <td>${formatCurrency(item.bonus)}</td>
-            </tr>`
-        )
-        .join('');
-      return (
-        `<tr>
-          <td>${i + 1}</td>
-          <td>${t.date.split('T')[0]}</td>
-          <td>${t.transactionNumber ?? '-'}</td>
-          <td>${formatCurrency(t.handlingTotal)}</td>
-          <td></td>
-          <td>${formatCurrency(t.bonus)}</td>
-        </tr>` + itemRows
-      );
-    })
-    .join('');
-
   const html = `
   <html>
   <head>
@@ -87,7 +59,7 @@ export async function generateSalaryPdf(salary: EmployeeSalary): Promise<void> {
       <tr><td class="label">Nama</td><td class="value">${salary.employee.name}</td></tr>
       <tr><td class="label">Kode Akses</td><td class="value">${salary.employee.access_code}</td></tr>
       <tr><td class="label">Gaji per Hari</td><td class="value">${formatCurrency(salary.employee.daily_salary)}</td></tr>
-      <tr><td class="label">Persentase Bonus</td><td class="value">${bonusPct}%</td></tr>
+      <tr><td class="label">Tunjangan (bulanan)</td><td class="value">${formatCurrency(salary.employee.allowance ?? 0)}</td></tr>
     </table>
 
     <h2>Ringkasan Gaji</h2>
@@ -95,7 +67,8 @@ export async function generateSalaryPdf(salary: EmployeeSalary): Promise<void> {
       <tr><td class="label">Hari Kerja (Hadir)</td><td class="value">${salary.daysWorked} hari</td></tr>
       <tr><td class="label">Hari Terlambat</td><td class="value">${salary.daysLate} hari</td></tr>
       <tr><td class="label">Gaji Pokok (${salary.daysWorked} × ${formatCurrency(salary.employee.daily_salary)})</td><td class="value">${formatCurrency(salary.baseSalary)}</td></tr>
-      <tr><td class="label">Bonus Penjualan (${bonusPct}%)</td><td class="value">${formatCurrency(salary.bonus)}</td></tr>
+      <tr><td class="label">Bonus Penjualan</td><td class="value">${formatCurrency(salary.bonus)}</td></tr>
+      <tr><td class="label">Tunjangan (bulanan)</td><td class="value">${formatCurrency(salary.employee.allowance ?? 0)}</td></tr>
       <tr class="total-row"><td class="label">TOTAL GAJI</td><td class="value">${formatCurrency(salary.totalSalary)}</td></tr>
     </table>
 
@@ -103,13 +76,6 @@ export async function generateSalaryPdf(salary: EmployeeSalary): Promise<void> {
     <table>
       <thead><tr><th>#</th><th>Tanggal</th><th>Status</th><th>Masuk</th><th>Keluar</th></tr></thead>
       <tbody>${attendanceRows || '<tr><td colspan="5" style="text-align:center;color:#aaa;">Tidak ada data</td></tr>'}</tbody>
-    </table>
-
-    <h2>Detail Bonus Penjualan (${bonusPct}%)</h2>
-    <p style="color:#666;font-size:11px;margin-bottom:8px;">Rumus per item: (Harga − Penanganan) × ${bonusPct}% = Bonus. Total bonus = jumlah bonus tiap item.</p>
-    <table>
-      <thead><tr><th>#</th><th>Tanggal</th><th>Transaksi</th><th>Net (Harga − Penanganan)</th><th></th><th>Bonus</th></tr></thead>
-      <tbody>${bonusRows || '<tr><td colspan="6" style="text-align:center;color:#aaa;">Tidak ada data</td></tr>'}</tbody>
     </table>
 
     <p class="footer">Dibuat oleh Kasir POS — ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>

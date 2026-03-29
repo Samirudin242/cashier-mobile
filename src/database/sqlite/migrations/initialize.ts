@@ -25,6 +25,11 @@ async function runMigrations(db: Awaited<ReturnType<typeof getDatabase>>) {
       "ALTER TABLE users ADD COLUMN bonus_percent REAL NOT NULL DEFAULT 10"
     );
   }
+  if (!columns.some((c) => c.name === "allowance")) {
+    await db.execAsync(
+      "ALTER TABLE users ADD COLUMN allowance REAL NOT NULL DEFAULT 0"
+    );
+  }
 
   // Add handling_fee to products if missing
   const prodCols = await db.getAllAsync<{ name: string }>(

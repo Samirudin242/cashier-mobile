@@ -103,7 +103,7 @@ async function downloadUsers(result: DownloadResult) {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, name, role, access_code, store_id, is_active, daily_salary, bonus_percent')
+      .select('*')
       .order('name', { ascending: true });
 
     if (error) throw error;
@@ -119,6 +119,7 @@ async function downloadUsers(result: DownloadResult) {
           is_active: !!row.is_active,
           daily_salary: row.daily_salary ?? 0,
           bonus_percent: row.bonus_percent ?? 10,
+          allowance: row.allowance ?? 0,
         };
         await userRepository.upsertUserToLocal(user);
         result.downloaded++;

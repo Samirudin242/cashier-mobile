@@ -11,7 +11,13 @@ export function EmployeeFormScreen() {
   const route = useRoute<any>();
   const editId = route.params?.employeeId as string | undefined;
 
-  const [form, setForm] = useState({ name: '', accessCode: '', dailySalary: '', bonusPercent: '10' });
+  const [form, setForm] = useState({
+    name: '',
+    accessCode: '',
+    dailySalary: '',
+    bonusPercent: '10',
+    allowance: '',
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -24,6 +30,7 @@ export function EmployeeFormScreen() {
             accessCode: emp.access_code,
             dailySalary: String(emp.daily_salary),
             bonusPercent: String(emp.bonus_percent ?? 10),
+            allowance: emp.allowance ? String(emp.allowance) : '',
           });
         }
       })();
@@ -41,6 +48,8 @@ export function EmployeeFormScreen() {
     }
     const salary = parseFloat(form.dailySalary) || 0;
     const bonusPct = parseFloat(form.bonusPercent) || 0;
+    const allowanceRaw = form.allowance.trim();
+    const allowance = allowanceRaw === '' ? 0 : parseFloat(allowanceRaw) || 0;
 
     setLoading(true);
     try {
@@ -49,6 +58,7 @@ export function EmployeeFormScreen() {
           name: form.name.trim(),
           dailySalary: salary,
           bonusPercent: bonusPct,
+          allowance,
         });
       } else {
         const existingLocal = await userRepository.findByAccessCode(form.accessCode);
@@ -58,8 +68,8 @@ export function EmployeeFormScreen() {
           return;
         }
         const existingCloud = await userRepository.findByAccessCodeFromSupabase(form.accessCode.trim().toUpperCase());
-        if (existingCloud) {
-          Alert.alert('Kesalahan', 'Kode akses sudah digunakan. Gunakan kode lain.');
+        if (existingCloud?.is_active) {
+          Alert.alert('Kesalahan', 'Kode akses sudah dipakai karyawan aktif di server. Gunakan kode lain.');
           setLoading(false);
           return;
         }
@@ -68,6 +78,7 @@ export function EmployeeFormScreen() {
           accessCode: form.accessCode.trim(),
           dailySalary: salary,
           bonusPercent: bonusPct,
+          allowance,
         });
       }
       navigation.goBack();
@@ -109,6 +120,16 @@ export function EmployeeFormScreen() {
           onChangeText={(v) => setForm((p) => ({ ...p, bonusPercent: v }))}
           keyboardType="numeric"
         />
+        <AppInput
+          label="Tunjangan per bulan (Rp, opsional)"
+          placeholder="Kosongkan jika tidak ada"
+          value={form.allowance}
+          onChangeText={(v) => setForm((p) => ({ ...p, allowance: v }))}
+          keyboardType="numeric"
+        />
+        <AppText variant="captionMuted" style={styles.bonusHint}>
+          Dihitung dari ((harga jual − harga modal) − biaya penanganan) × jumlah terjual × persen di atas.
+        </AppText>
       </AppCard>
 
       <View style={styles.actions}>
@@ -134,6 +155,9 @@ export function EmployeeFormScreen() {
 }
 
 const styles = StyleSheet.create({
+  bonusHint: {
+    marginTop: spacing.sm,
+  },
   card: {
     padding: spacing.lg,
     marginTop: spacing.base,

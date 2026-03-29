@@ -6,7 +6,7 @@ import { AppScreen, AppText, AppButton, AppCard, AppInput } from '../../componen
 import { PrinterDevicePickerModal } from '../../components/PrinterDevicePickerModal';
 import { transactionRepository } from '../../repositories/transactionRepository';
 import { formatCurrency, normalizeIndonesianPhoneForWhatsApp } from '../../utils/helpers';
-import { buildReceiptData } from '../../services/printerService';
+import { buildReceiptData, formatReceiptTextForWhatsApp } from '../../services/printerService';
 import { usePrintReceipt } from '../../hooks/usePrintReceipt';
 import { Transaction, TransactionItem } from '../../types';
 import { colors, spacing, radius } from '../../config/theme';
@@ -21,7 +21,6 @@ export function TransactionSuccessScreen() {
   );
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [items, setItems] = useState<TransactionItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<string>('Tunai');
   const printReceiptFlow = usePrintReceipt();
 
   useEffect(() => {
@@ -32,8 +31,6 @@ export function TransactionSuccessScreen() {
       const txn = await transactionRepository.getById(transactionId);
       if (txn) {
         setTransaction(txn);
-        const pm = { cash: 'Tunai', transfer: 'Transfer', qris: 'QRIS' } as Record<string, string>;
-        setPaymentMethod(pm[txn.payment_method] ?? txn.payment_method);
       }
     })();
   }, [transactionId]);
@@ -47,18 +44,11 @@ export function TransactionSuccessScreen() {
   };
 
   const handleWhatsApp = async () => {
-    const itemLines = items.length > 0
-      ? items.map((i) => `  ${i.product_name} x${i.quantity} = ${formatCurrency(i.subtotal)}`).join('\n')
-      : '';
-    const message = [
-      '🧾 *Struk*',
-      transactionNumber,
-      itemLines ? `\n${itemLines}\n` : '',
-      `Total: *${formatCurrency(total)}*`,
-      `Pembayaran: ${paymentMethod}`,
-      '',
-      'Terima kasih!',
-    ].filter(Boolean).join('\n');
+    if (!transaction) {
+      Alert.alert('Tunggu sebentar', 'Data transaksi masih dimuat.');
+      return;
+    }
+    const message = formatReceiptTextForWhatsApp(buildReceiptData(transaction, items));
     const phone = normalizeIndonesianPhoneForWhatsApp(whatsapp.trim());
 
     if (!phone) {

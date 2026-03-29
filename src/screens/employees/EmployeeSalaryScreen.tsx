@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Wallet,
   Award,
+  Coins,
 } from 'lucide-react-native';
 import { AppScreen, AppCard, AppText, AppButton, AppBadge, AppStatCard, AppSectionHeader } from '../../components/ui';
 import { userRepository } from '../../repositories/userRepository';
@@ -61,6 +62,7 @@ export function EmployeeSalaryScreen() {
     const daysLate = attendance.filter((a: any) => a.status === 'late').length;
     const baseSalary = daysWorked * employee.daily_salary;
     const bonus = transactions.reduce((sum: number, t: any) => sum + t.bonus, 0);
+    const allowance = employee.allowance ?? 0;
 
     setSalary({
       employee,
@@ -68,7 +70,7 @@ export function EmployeeSalaryScreen() {
       daysLate,
       baseSalary,
       bonus,
-      totalSalary: baseSalary + bonus,
+      totalSalary: baseSalary + bonus + allowance,
       periodStart: start,
       periodEnd: end,
       transactions,
@@ -148,6 +150,7 @@ export function EmployeeSalaryScreen() {
             <AppText variant="captionMuted">Kode: {employee.access_code}</AppText>
             <AppText variant="caption">Gaji/Hari: {formatCurrency(employee.daily_salary)}</AppText>
             <AppText variant="caption">Bonus: {employee.bonus_percent}%</AppText>
+            <AppText variant="caption">Tunjangan/bulan: {formatCurrency(employee.allowance ?? 0)}</AppText>
           </View>
         </View>
         <View style={styles.profileActions}>
@@ -205,9 +208,19 @@ export function EmployeeSalaryScreen() {
         />
         <View style={{ width: spacing.md }} />
         <AppStatCard
+          title="Tunjangan (bulanan)"
+          value={formatCurrency(employee.allowance ?? 0)}
+          subtitle="Per periode slip gaji"
+          icon={<Coins size={16} color={colors.primaryDark} />}
+          accentColor={colors.primaryDark}
+        />
+      </View>
+
+      <View style={[styles.statsRow, { marginTop: spacing.md }]}>
+        <AppStatCard
           title="Total Gaji"
           value={formatCurrency(salary.totalSalary)}
-          subtitle="Pokok + Bonus"
+          subtitle="Pokok + bonus + tunjangan"
           icon={<TrendingUp size={16} color={colors.primary} />}
           accentColor={colors.primary}
         />
@@ -239,6 +252,9 @@ export function EmployeeSalaryScreen() {
 
       {/* Bonus Detail */}
       <AppSectionHeader title="Detail Bonus Penjualan" />
+      <AppText variant="captionMuted" style={styles.bonusFormulaHint}>
+        Per item: ((harga jual − harga modal) − biaya penanganan) × jumlah × {employee.bonus_percent}%
+      </AppText>
       {salary.transactions.length === 0 ? (
         <AppCard style={styles.emptyCard}>
           <AppText variant="captionMuted" style={styles.emptyText}>Belum ada transaksi bulan ini</AppText>
@@ -252,7 +268,8 @@ export function EmployeeSalaryScreen() {
                   {t.transactionNumber ? `${t.transactionNumber} · ` : ''}{t.date.split('T')[0]}
                 </AppText>
                 <AppText variant="captionMuted">
-                  Item: {formatCurrency(t.itemsTotal)} − Penanganan: {formatCurrency(t.handlingTotal)} = {formatCurrency(t.net)}
+                  Jual: {formatCurrency(t.itemsTotal)} · Penanganan: {formatCurrency(t.handlingTotal)} · Dasar bonus:{' '}
+                  {formatCurrency(t.net)}
                 </AppText>
               </View>
               <View style={styles.bonusCol}>
@@ -407,6 +424,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
+  },
+  bonusFormulaHint: {
+    paddingHorizontal: spacing.base,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.sm,
   },
   pdfSection: {
     paddingHorizontal: spacing.base,

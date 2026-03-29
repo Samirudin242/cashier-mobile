@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS users (
   store_id text NOT NULL DEFAULT 'default_store',
   daily_salary numeric NOT NULL DEFAULT 0,
   bonus_percent numeric NOT NULL DEFAULT 10,
+  allowance numeric NOT NULL DEFAULT 0,
   is_active boolean NOT NULL DEFAULT true,
   logged_in_device_id text,
   created_at timestamptz NOT NULL DEFAULT now()
