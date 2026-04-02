@@ -19,15 +19,24 @@ function isAllowanceColumnMissing(error: PostgrestError | null): boolean {
   );
 }
 
+/** Match `access_code` when cloud rows may be mixed-case (Postgres `text` equality is case-sensitive). */
+function accessCodeMatchVariants(code: string): string[] {
+  const t = code.trim();
+  if (!t) return [];
+  return Array.from(new Set([t, t.toUpperCase(), t.toLowerCase()]));
+}
+
 export const userRepository = {
   /**
    * Find user by access code in Supabase (cloud). Use this for login.
    */
   async findByAccessCodeFromSupabase(code: string): Promise<User | null> {
+    const variants = accessCodeMatchVariants(code);
+    if (variants.length === 0) return null;
     const { data, error } = await supabase
       .from("users")
       .select("*")
-      .eq("access_code", code.trim().toUpperCase())
+      .in("access_code", variants)
       .maybeSingle();
 
     if (error) throw error;
@@ -484,10 +493,12 @@ export const userRepository = {
    * Returns null if free, or the locked device_id if taken.
    */
   async checkCloudDeviceLock(accessCode: string): Promise<string | null> {
+    const variants = accessCodeMatchVariants(accessCode);
+    if (variants.length === 0) return null;
     const { data, error } = await supabase
       .from("users")
       .select("logged_in_device_id")
-      .eq("access_code", accessCode.trim().toUpperCase())
+      .in("access_code", variants)
       .maybeSingle();
 
     if (error) throw error;
@@ -498,10 +509,12 @@ export const userRepository = {
    * Lock the access code to this device in Supabase.
    */
   async lockDeviceInCloud(accessCode: string, deviceId: string): Promise<void> {
+    const variants = accessCodeMatchVariants(accessCode);
+    if (variants.length === 0) return;
     const { error } = await supabase
       .from("users")
       .update({ logged_in_device_id: deviceId })
-      .eq("access_code", accessCode.trim().toUpperCase());
+      .in("access_code", variants);
 
     if (error) throw error;
   },
@@ -510,10 +523,12 @@ export const userRepository = {
    * Unlock the access code from this device in Supabase (on logout).
    */
   async unlockDeviceInCloud(accessCode: string): Promise<void> {
+    const variants = accessCodeMatchVariants(accessCode);
+    if (variants.length === 0) return;
     const { error } = await supabase
       .from("users")
       .update({ logged_in_device_id: null })
-      .eq("access_code", accessCode.trim().toUpperCase());
+      .in("access_code", variants);
 
     if (error) throw error;
   },
@@ -526,10 +541,13 @@ export const userRepository = {
     accessCode: string,
     deviceId: string | null
   ): Promise<void> {
+    const variants = accessCodeMatchVariants(accessCode);
+    if (variants.length === 0) return;
     const db = await getDatabase();
+    const ph = variants.map(() => "?").join(", ");
     await db.runAsync(
-      "UPDATE users SET logged_in_device_id = ? WHERE access_code = ?",
-      [deviceId, accessCode.trim().toUpperCase()]
+      `UPDATE users SET logged_in_device_id = ? WHERE access_code IN (${ph})`,
+      [deviceId, ...variants]
     );
   },
 };

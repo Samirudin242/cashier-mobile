@@ -46,6 +46,8 @@ export function ProductDetailScreen() {
 
   if (!product) return null;
 
+  const showCostAndHandling = user?.role !== "employee";
+
   return (
     <AppScreen scroll>
       <View style={styles.header}>
@@ -63,14 +65,18 @@ export function ProductDetailScreen() {
           value={formatCurrency(product.price)}
           highlight
         />
-        <DetailRow
-          label="Harga Modal"
-          value={formatCurrency(product.cost_price)}
-        />
-        <DetailRow
-          label="Biaya penanganan"
-          value={formatCurrency(product.handling_fee ?? 0)}
-        />
+        {showCostAndHandling ? (
+          <>
+            <DetailRow
+              label="Harga Modal"
+              value={formatCurrency(product.cost_price)}
+            />
+            <DetailRow
+              label="Biaya penanganan"
+              value={formatCurrency(product.handling_fee ?? 0)}
+            />
+          </>
+        ) : null}
         <DetailRow label="Stok" value={String(product.stock)} />
         <DetailRow label="Kategori" value={product.category} />
         <DetailRow
