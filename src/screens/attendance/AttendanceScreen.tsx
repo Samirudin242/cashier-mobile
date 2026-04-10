@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { View, FlatList, StyleSheet, Alert } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import {
@@ -30,6 +30,8 @@ export function AttendanceScreen() {
   );
   const [history, setHistory] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(false);
+  /** Blocks re-entry before React re-renders (rapid double/triple tap). */
+  const attendanceActionInFlight = useRef(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -48,7 +50,8 @@ export function AttendanceScreen() {
   );
 
   const handleClockIn = async () => {
-    if (!user) return;
+    if (!user || attendanceActionInFlight.current) return;
+    attendanceActionInFlight.current = true;
     setLoading(true);
     try {
       const hour = new Date().getHours();
@@ -64,12 +67,14 @@ export function AttendanceScreen() {
     } catch (err: any) {
       Alert.alert("Kesalahan", err.message);
     } finally {
+      attendanceActionInFlight.current = false;
       setLoading(false);
     }
   };
 
   const handleClockOut = async () => {
-    if (!todayAttendance) return;
+    if (!todayAttendance || attendanceActionInFlight.current) return;
+    attendanceActionInFlight.current = true;
     setLoading(true);
     try {
       await attendanceRepository.clockOut(todayAttendance.local_id);
@@ -77,6 +82,7 @@ export function AttendanceScreen() {
     } catch (err: any) {
       Alert.alert("Kesalahan", err.message);
     } finally {
+      attendanceActionInFlight.current = false;
       setLoading(false);
     }
   };
