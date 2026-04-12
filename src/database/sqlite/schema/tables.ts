@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS transaction_items (
   product_local_id TEXT NOT NULL,
   product_name TEXT NOT NULL,
   product_price REAL NOT NULL,
+  cost_price REAL NOT NULL DEFAULT 0,
   handling_fee REAL NOT NULL DEFAULT 0,
   quantity INTEGER NOT NULL,
   subtotal REAL NOT NULL,

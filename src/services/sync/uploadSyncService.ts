@@ -292,6 +292,7 @@ async function uploadTransactionItems(transactionLocalId: string, cloudTransacti
       transaction_id: cloudTransactionId,
       product_name: item.product_name,
       product_price: item.product_price,
+      cost_price: item.cost_price ?? 0,
       handling_fee: item.handling_fee ?? 0,
       quantity: item.quantity,
       subtotal: item.subtotal,

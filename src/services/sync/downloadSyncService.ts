@@ -199,6 +199,7 @@ async function downloadTransactionItems(_deviceId: string, result: DownloadResul
         const formatted = cloudItems.map((i: any) => ({
           product_name: i.product_name,
           product_price: i.product_price,
+          cost_price: i.cost_price ?? 0,
           handling_fee: i.handling_fee ?? 0,
           quantity: i.quantity,
           subtotal: i.subtotal,

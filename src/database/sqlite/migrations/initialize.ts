@@ -51,6 +51,21 @@ async function runMigrations(db: Awaited<ReturnType<typeof getDatabase>>) {
     );
   }
 
+  // Add cost_price to transaction_items if missing
+  if (!tiCols.some((c) => c.name === "cost_price")) {
+    await db.execAsync(
+      "ALTER TABLE transaction_items ADD COLUMN cost_price REAL NOT NULL DEFAULT 0"
+    );
+  }
+
+  // Always backfill cost_price = 0 rows from products (handles legacy data & sync gaps)
+  await db.execAsync(
+    `UPDATE transaction_items SET cost_price = (
+      SELECT p.cost_price FROM products p WHERE p.local_id = transaction_items.product_local_id AND p.is_deleted = 0
+    ) WHERE cost_price = 0 AND product_local_id != ''
+      AND EXISTS (SELECT 1 FROM products p WHERE p.local_id = transaction_items.product_local_id AND p.is_deleted = 0)`
+  );
+
   await db.execAsync(
     "UPDATE users SET daily_salary = 75000 WHERE role = 'employee' AND daily_salary = 0"
   );

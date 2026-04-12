@@ -90,6 +90,7 @@ export interface TransactionItem {
   product_local_id: string;
   product_name: string;
   product_price: number;
+  cost_price: number;
   handling_fee: number;
   quantity: number;
   subtotal: number;

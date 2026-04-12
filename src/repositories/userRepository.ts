@@ -410,7 +410,6 @@ export const userRepository = {
   /**
    * Get bonus-earning transactions for an employee in a date range.
    * Bonus per item: ((harga_jual - harga_modal) - biaya_penanganan) × qty × bonus_percent%
-   * Modal diambil dari produk (LEFT JOIN); jika produk tidak ada, modal = 0.
    */
   async getEmployeeTransactionBonus(
     employeeId: string,
@@ -422,11 +421,9 @@ export const userRepository = {
     const pct = bonusPercent / 100;
     const rows = await db.getAllAsync<any>(
       `SELECT t.local_id, t.transaction_number, t.transaction_date,
-              ti.product_name, ti.product_price, ti.handling_fee, ti.quantity, ti.subtotal,
-              COALESCE(p.cost_price, 0) AS cost_price
+              ti.product_name, ti.product_price, ti.cost_price, ti.handling_fee, ti.quantity, ti.subtotal
        FROM transactions t
        JOIN transaction_items ti ON ti.transaction_local_id = t.local_id
-       LEFT JOIN products p ON p.local_id = ti.product_local_id AND p.is_deleted = 0
        WHERE t.employee_id = ? AND date(t.transaction_date) >= date(?) AND date(t.transaction_date) <= date(?) AND t.is_deleted = 0
        ORDER BY t.transaction_date ASC, ti.local_id ASC`,
       [employeeId, startDate, endDate]

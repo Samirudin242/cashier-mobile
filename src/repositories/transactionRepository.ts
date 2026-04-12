@@ -92,9 +92,9 @@ export const transactionRepository = {
         const itemId = generateLocalId();
         const itemSubtotal = item.product.price * item.quantity;
         await txn.runAsync(
-          `INSERT INTO transaction_items (local_id, transaction_local_id, product_local_id, product_name, product_price, handling_fee, quantity, subtotal)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [itemId, txnId, item.product.local_id, item.product.name, item.product.price, item.product.handling_fee ?? 0, item.quantity, itemSubtotal]
+          `INSERT INTO transaction_items (local_id, transaction_local_id, product_local_id, product_name, product_price, cost_price, handling_fee, quantity, subtotal)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [itemId, txnId, item.product.local_id, item.product.name, item.product.price, item.product.cost_price ?? 0, item.product.handling_fee ?? 0, item.quantity, itemSubtotal]
         );
 
         await txn.runAsync(
@@ -207,15 +207,15 @@ export const transactionRepository = {
     return row?.local_id ?? null;
   },
 
-  async replaceItemsFromCloud(localTransactionId: string, items: { product_name: string; product_price: number; handling_fee: number; quantity: number; subtotal: number }[]): Promise<void> {
+  async replaceItemsFromCloud(localTransactionId: string, items: { product_name: string; product_price: number; cost_price?: number; handling_fee: number; quantity: number; subtotal: number }[]): Promise<void> {
     const db = await getDatabase();
     await db.withExclusiveTransactionAsync(async (txn) => {
       await txn.runAsync('DELETE FROM transaction_items WHERE transaction_local_id = ?', [localTransactionId]);
       for (const item of items) {
         await txn.runAsync(
-          `INSERT INTO transaction_items (local_id, transaction_local_id, product_local_id, product_name, product_price, handling_fee, quantity, subtotal)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [generateLocalId(), localTransactionId, '', item.product_name, item.product_price, item.handling_fee ?? 0, item.quantity, item.subtotal]
+          `INSERT INTO transaction_items (local_id, transaction_local_id, product_local_id, product_name, product_price, cost_price, handling_fee, quantity, subtotal)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [generateLocalId(), localTransactionId, '', item.product_name, item.product_price, item.cost_price ?? 0, item.handling_fee ?? 0, item.quantity, item.subtotal]
         );
       }
     });
@@ -251,7 +251,6 @@ export const transactionRepository = {
 
   /**
    * Per calendar day: gross profit (Σ(jual−modal)×qty), total capital (modal×qty), total handling fees.
-   * Modal from `products.cost_price`; missing product → modal 0.
    */
   async getDailyItemsEconomics(
     days: number = 7
@@ -262,12 +261,11 @@ export const transactionRepository = {
     const rows = await db.getAllAsync<any>(
       `SELECT
          date(t.transaction_date) AS d,
-         SUM((ti.product_price - COALESCE(p.cost_price, 0)) * ti.quantity) AS profit,
-         SUM(COALESCE(p.cost_price, 0) * ti.quantity) AS capital_sold,
+         SUM((ti.product_price - ti.cost_price) * ti.quantity) AS profit,
+         SUM(ti.cost_price * ti.quantity) AS capital_sold,
          SUM(ti.handling_fee * ti.quantity) AS handling_total
        FROM transaction_items ti
        INNER JOIN transactions t ON t.local_id = ti.transaction_local_id AND t.is_deleted = 0
-       LEFT JOIN products p ON p.local_id = ti.product_local_id AND p.is_deleted = 0
        GROUP BY date(t.transaction_date)
        ORDER BY d DESC
        LIMIT ?`,
@@ -291,12 +289,11 @@ export const transactionRepository = {
     const rows = await db.getAllAsync<any>(
       `SELECT
          date(t.transaction_date) AS d,
-         SUM((ti.product_price - COALESCE(p.cost_price, 0)) * ti.quantity) AS profit,
-         SUM(COALESCE(p.cost_price, 0) * ti.quantity) AS capital_sold,
+         SUM((ti.product_price - ti.cost_price) * ti.quantity) AS profit,
+         SUM(ti.cost_price * ti.quantity) AS capital_sold,
          SUM(ti.handling_fee * ti.quantity) AS handling_total
        FROM transaction_items ti
        INNER JOIN transactions t ON t.local_id = ti.transaction_local_id AND t.is_deleted = 0
-       LEFT JOIN products p ON p.local_id = ti.product_local_id AND p.is_deleted = 0
        WHERE date(t.transaction_date) >= ? AND date(t.transaction_date) <= ?
        GROUP BY date(t.transaction_date)
        ORDER BY d ASC`,
@@ -320,12 +317,11 @@ export const transactionRepository = {
     const today = todayDateString();
     const row = await db.getFirstAsync<any>(
       `SELECT
-         SUM((ti.product_price - COALESCE(p.cost_price, 0)) * ti.quantity) AS profit,
-         SUM(COALESCE(p.cost_price, 0) * ti.quantity) AS capital_sold,
+         SUM((ti.product_price - ti.cost_price) * ti.quantity) AS profit,
+         SUM(ti.cost_price * ti.quantity) AS capital_sold,
          SUM(ti.handling_fee * ti.quantity) AS handling_total
        FROM transaction_items ti
        INNER JOIN transactions t ON t.local_id = ti.transaction_local_id AND t.is_deleted = 0
-       LEFT JOIN products p ON p.local_id = ti.product_local_id AND p.is_deleted = 0
        WHERE date(t.transaction_date) = date(?)`,
       [today]
     );
@@ -373,6 +369,7 @@ function mapRowToItem(row: any): TransactionItem {
     product_local_id: row.product_local_id,
     product_name: row.product_name,
     product_price: row.product_price,
+    cost_price: row.cost_price ?? 0,
     handling_fee: row.handling_fee ?? 0,
     quantity: row.quantity,
     subtotal: row.subtotal,
