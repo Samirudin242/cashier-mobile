@@ -93,10 +93,14 @@ CREATE TABLE IF NOT EXISTS transaction_items (
   transaction_id uuid REFERENCES transactions(id),
   product_name text NOT NULL,
   product_price numeric NOT NULL,
+  cost_price numeric NOT NULL DEFAULT 0,
   handling_fee numeric NOT NULL DEFAULT 0,
   quantity integer NOT NULL,
   subtotal numeric NOT NULL
 );
+
+-- Migration: add cost_price to existing transaction_items tables
+ALTER TABLE transaction_items ADD COLUMN IF NOT EXISTS cost_price numeric NOT NULL DEFAULT 0;
 
 -- ========================
 -- CUSTOMERS
@@ -163,9 +167,48 @@ ON CONFLICT (id) DO NOTHING;
 -- ========================
 -- INDEXES
 -- ========================
+-- ========================
+-- RPC FUNCTIONS
+-- ========================
+
+-- Aggregated transaction summary for a date range (used by Reports screen).
+-- Run this in Supabase SQL Editor if not yet created.
+CREATE OR REPLACE FUNCTION get_transaction_summary(
+  p_start timestamptz,
+  p_end   timestamptz
+)
+RETURNS TABLE (
+  total_transaksi        bigint,
+  total_pendapatan       numeric,
+  total_modal            numeric,
+  total_laba             numeric,
+  total_biaya_penanganan numeric
+)
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT
+    COUNT(DISTINCT t.id)::bigint,
+    COALESCE(SUM(ti.product_price * ti.quantity), 0),
+    COALESCE(SUM(COALESCE(ti.cost_price, 0) * ti.quantity), 0),
+    COALESCE(SUM((ti.product_price - COALESCE(ti.cost_price, 0)) * ti.quantity), 0),
+    COALESCE(SUM(COALESCE(ti.handling_fee, 0) * ti.quantity), 0)
+  FROM transactions t
+  JOIN transaction_items ti ON ti.transaction_id = t.id
+  WHERE t.is_deleted = FALSE
+    AND t.transaction_date >= p_start
+    AND t.transaction_date < p_end;
+$$;
+
+-- ========================
+-- INDEXES
+-- ========================
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(transaction_date);
 CREATE INDEX IF NOT EXISTS idx_transactions_number ON transactions(transaction_number);
+CREATE INDEX IF NOT EXISTS idx_transactions_employee ON transactions(employee_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_deleted ON transactions(is_deleted);
+CREATE INDEX IF NOT EXISTS idx_transaction_items_transaction ON transaction_items(transaction_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date);
 CREATE INDEX IF NOT EXISTS idx_attendance_employee ON attendance(employee_id);
 CREATE INDEX IF NOT EXISTS idx_customers_whatsapp ON customers(whatsapp);

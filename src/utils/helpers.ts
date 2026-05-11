@@ -118,6 +118,24 @@ export function countDaysInclusive(startStr: string, endStr: string): number {
   return enumerateDatesInclusive(startStr, endStr).length;
 }
 
+/** Convert YYYY-MM-DD to the ISO start of that local calendar day. */
+export function localDateToStartISO(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+}
+
+/** Convert YYYY-MM-DD to the ISO start of the NEXT local calendar day (exclusive end). */
+export function localDateToEndISO(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d + 1, 0, 0, 0, 0).toISOString();
+}
+
+/** Convert an ISO timestamp string to a local calendar date string (YYYY-MM-DD). */
+export function isoToLocalDateString(isoStr: string): string {
+  const d = new Date(isoStr);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /**
  * Normalizes Indonesian phone input to WhatsApp international format (62xxxxxxxxxxx).
  * Accepts e.g. 082347497133, +62 823-4749-7133, 6282347497133

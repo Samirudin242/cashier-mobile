@@ -2,7 +2,7 @@ import { getDatabase } from "../database/sqlite/client";
 import { supabase } from "../config/supabase";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { User, UserRole } from "../types";
-import { generateLocalId, nowISO } from "../utils/helpers";
+import { generateLocalId, nowISO, localDateToStartISO, localDateToEndISO } from "../utils/helpers";
 
 /** Cloud DB may not have `allowance` until migration is applied; PostgREST errors vary by version. */
 function isAllowanceColumnMissing(error: PostgrestError | null): boolean {
@@ -417,70 +417,52 @@ export const userRepository = {
     endDate: string,
     bonusPercent: number
   ) {
-    const db = await getDatabase();
     const pct = bonusPercent / 100;
-    const rows = await db.getAllAsync<any>(
-      `SELECT t.local_id, t.transaction_number, t.transaction_date,
-              ti.product_name, ti.product_price, ti.cost_price, ti.handling_fee, ti.quantity, ti.subtotal
-       FROM transactions t
-       JOIN transaction_items ti ON ti.transaction_local_id = t.local_id
-       WHERE t.employee_id = ? AND date(t.transaction_date) >= date(?) AND date(t.transaction_date) <= date(?) AND t.is_deleted = 0
-       ORDER BY t.transaction_date ASC, ti.local_id ASC`,
-      [employeeId, startDate, endDate]
-    );
+    const startISO = localDateToStartISO(startDate);
+    const endISO = localDateToEndISO(endDate);
 
-    const txMap = new Map<
-      string,
-      {
-        transactionNumber: string;
-        date: string;
-        items: { productName: string; baseForBonus: number; quantity: number; bonus: number }[];
-        itemsTotal: number;
-        handlingTotal: number;
-      }
-    >();
-    for (const r of rows) {
-      const tid = r.local_id;
-      const price = (r.product_price as number) ?? 0;
-      const costPrice = (r.cost_price as number) ?? 0;
-      const handlingFee = (r.handling_fee as number) ?? 0;
-      const qty = (r.quantity as number) ?? 1;
-      const netPerUnit = Math.max(0, price - costPrice - handlingFee);
-      const baseForBonus = netPerUnit * qty;
-      const itemBonus = baseForBonus * pct;
-      const handlingForItem = handlingFee * qty;
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, transaction_number, transaction_date, transaction_items(product_name, product_price, cost_price, handling_fee, quantity, subtotal)')
+      .eq('employee_id', employeeId)
+      .eq('is_deleted', false)
+      .gte('transaction_date', startISO)
+      .lt('transaction_date', endISO)
+      .order('transaction_date', { ascending: true });
 
-      if (!txMap.has(tid)) {
-        txMap.set(tid, {
-          transactionNumber: r.transaction_number,
-          date: r.transaction_date,
-          items: [],
-          itemsTotal: 0,
-          handlingTotal: 0,
-        });
-      }
-      const tx = txMap.get(tid)!;
-      tx.items.push({
-        productName: r.product_name,
-        baseForBonus,
-        quantity: qty,
-        bonus: itemBonus,
+    if (error) throw error;
+
+    return (data ?? []).map((txn: any) => {
+      const txItems: any[] = txn.transaction_items ?? [];
+
+      const items = txItems.map((item: any) => {
+        const price = (item.product_price as number) ?? 0;
+        const costPrice = (item.cost_price as number) ?? 0;
+        const handlingFee = (item.handling_fee as number) ?? 0;
+        const qty = (item.quantity as number) ?? 1;
+        const netPerUnit = Math.max(0, price - costPrice - handlingFee);
+        const baseForBonus = netPerUnit * qty;
+        return {
+          productName: item.product_name,
+          baseForBonus,
+          quantity: qty,
+          bonus: baseForBonus * pct,
+        };
       });
-      tx.itemsTotal += (r.subtotal as number) ?? 0;
-      tx.handlingTotal += handlingForItem;
-    }
 
-    return Array.from(txMap.values()).map((tx) => {
-      const bonusBase = tx.items.reduce((sum, i) => sum + i.baseForBonus, 0);
-      const bonus = tx.items.reduce((sum, i) => sum + i.bonus, 0);
+      const itemsTotal = txItems.reduce((sum: number, i: any) => sum + ((i.subtotal as number) ?? 0), 0);
+      const handlingTotal = txItems.reduce((sum: number, i: any) => sum + (((i.handling_fee as number) ?? 0) * ((i.quantity as number) ?? 1)), 0);
+      const bonusBase = items.reduce((sum, i) => sum + i.baseForBonus, 0);
+      const bonus = items.reduce((sum, i) => sum + i.bonus, 0);
+
       return {
-        transactionNumber: tx.transactionNumber,
-        date: tx.date,
-        itemsTotal: tx.itemsTotal,
-        handlingTotal: tx.handlingTotal,
+        transactionNumber: txn.transaction_number,
+        date: txn.transaction_date,
+        itemsTotal,
+        handlingTotal,
         net: bonusBase,
         bonus,
-        items: tx.items,
+        items,
       };
     });
   },
